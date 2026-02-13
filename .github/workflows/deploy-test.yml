@@ -43,6 +43,7 @@ jobs:
         echo "🔧 Setting up production environment..."
         cp sag-garage-presupuestos/backend-php/.env.production sag-garage-presupuestos/backend-php/.env
         echo "✅ Production .env configured with NUEVA BASE saggarag_CotizadorTalleres"
+        echo "📁 Frontend build ready in dist/ folder"
 
     - name: 🌐 Deploy complete project via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -77,9 +78,11 @@ jobs:
     - name: ✅ Deploy Success Notification
       if: success()
       run: |
-        echo "🎉 Deploy Test Successful!"
-        echo "📡 File uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
-        echo "🌐 Check: https://saggarage.com.mx/n3wv3r510nh1dd3n/test.html"
+        echo "🎉 Deploy Complete - CLON SAG Garage Ready!"
+        echo "📡 Files uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
+        echo "🌐 Frontend App: https://saggarage.com.mx/n3wv3r510nh1dd3n/dist/"
+        echo "🔧 Backend API: https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php/"
+        echo "✅ NUEVA BASE: saggarag_CotizadorTalleres"
 
     - name: ❌ Deploy Failed Notification
       if: failure()
