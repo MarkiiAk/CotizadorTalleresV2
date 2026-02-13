@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200 dark:border-gray-800;
+  }
+  
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-sans antialiased;
+  }
+  
+  /* Scrollbar personalizado estilo macOS/Linear */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+}
+
+@layer components {
+  /* Checkboxes Verde Elegante - Override Global */
+  input[type="checkbox"] {
+    @apply accent-sag-700 dark:accent-sag-600;
+  }
+  
+  input[type="checkbox"]:checked {
+    background-color: rgb(21 128 61) !important; /* sag-700 */
+    border-color: rgb(21 128 61) !important;
+  }
+  
+  .dark input[type="checkbox"]:checked {
+    background-color: rgb(22 163 74) !important; /* sag-600 */
+    border-color: rgb(22 163 74) !important;
+  }
+  
+  input[type="checkbox"]:focus {
+    @apply ring-2 ring-sag-600 dark:ring-sag-500 ring-offset-2 dark:ring-offset-gray-950;
+  }
+
+  /* Botón Principal - Slate Sofisticado */
+  .btn-primary {
+    @apply px-4 py-2.5 bg-slate-900 dark:bg-slate-100 
+           text-white dark:text-slate-950 font-medium rounded-lg
+           hover:bg-slate-800 dark:hover:bg-slate-200
+           active:bg-slate-950 dark:active:bg-slate-300
+           transition-all duration-200 ease-out
+           shadow-sm hover:shadow-md
+           focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900 dark:disabled:hover:bg-slate-100;
+  }
+  
+  /* Botón Secundario - Neutro Refinado */
+  .btn-secondary {
+    @apply px-4 py-2.5 bg-gray-100 dark:bg-gray-800 
+           text-gray-900 dark:text-gray-50 font-medium rounded-lg
+           hover:bg-gray-200 dark:hover:bg-gray-700
+           active:bg-gray-300 dark:active:bg-gray-600
+           transition-all duration-200 ease-out
+           border border-gray-200 dark:border-gray-700
+           focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-950
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Botón Fantasma - Minimalista */
+  .btn-ghost {
+    @apply px-4 py-2.5 bg-transparent 
+           text-gray-700 dark:text-gray-300 font-medium rounded-lg
+           hover:bg-gray-100 dark:hover:bg-gray-800
+           active:bg-gray-200 dark:active:bg-gray-700
+           transition-all duration-200 ease-out
+           focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-950
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Botón Destructivo - Rojo Elegante */
+  .btn-danger {
+    @apply px-4 py-2.5 bg-red-600 dark:bg-red-500 
+           text-white font-medium rounded-lg
+           hover:bg-red-700 dark:hover:bg-red-600
+           active:bg-red-800 dark:active:bg-red-700
+           transition-all duration-200 ease-out
+           shadow-sm hover:shadow-md
+           focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Botón Success - Verde Sutil */
+  .btn-success {
+    @apply px-4 py-2.5 bg-sag-600 dark:bg-sag-500 
+           text-white font-medium rounded-lg
+           hover:bg-sag-700 dark:hover:bg-sag-600
+           active:bg-sag-800 dark:active:bg-sag-700
+           transition-all duration-200 ease-out
+           shadow-sm hover:shadow-md
+           focus:outline-none focus:ring-2 focus:ring-sag-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Card Premium - Estilo Stripe/Linear */
+  .card {
+    @apply bg-white dark:bg-gray-900 
+           border border-gray-200 dark:border-gray-800
+           rounded-xl p-6 
+           shadow-sm hover:shadow-md
+           transition-all duration-300 ease-out;
+  }
+  
+  .card-flat {
+    @apply bg-white dark:bg-gray-900 
+           border border-gray-200 dark:border-gray-800
+           rounded-xl p-6;
+  }
+  
+  /* Input Sofisticado */
+  .input {
+    @apply w-full px-4 py-2.5 
+           bg-white dark:bg-gray-900 
+           border-2 border-gray-300 dark:border-gray-700
+           rounded-lg
+           text-gray-900 dark:text-gray-50
+           placeholder:text-gray-400 dark:placeholder:text-gray-500
+           focus:outline-none focus:ring-0 focus:border-sag-600 dark:focus:border-sag-500
+           transition-all duration-200 ease-out
+           disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:cursor-not-allowed;
+  }
+  
+  /* Ocultar botones de número en campos type="number" */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  
+  .input-error {
+    @apply input border-red-500 focus:ring-red-500;
+  }
+  
+  /* Label Consistente */
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+  }
+  
+  .label-required::after {
+    content: " *";
+    @apply text-red-500;
+  }
+  
+  /* Badge Elegante */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           transition-colors duration-200;
+  }
+  
+  .badge-primary {
+    @apply bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+  }
+  
+  .badge-success {
+    @apply bg-sag-100 text-sag-900 dark:bg-sag-900 dark:text-sag-100;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100;
+  }
+  
+  .badge-error {
+    @apply bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100;
+  }
+  
+  .badge-neutral {
+    @apply bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100;
+  }
+}
+
+@layer utilities {
+  /* Glass Effect Sutil */
+  .glass {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md;
+  }
+  
+  .glass-strong {
+    @apply bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg;
+  }
+  
+  /* Gradientes Sofisticados */
+  .gradient-primary {
+    @apply bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-800 dark:to-slate-600;
+  }
+  
+  .gradient-neutral {
+    @apply bg-gradient-to-br from-gray-900 to-gray-700 dark:from-gray-800 dark:to-gray-600;
+  }
+  
+  .gradient-subtle {
+    @apply bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800;
+  }
+  
+  /* Text Gradient Minimalista */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-200 dark:to-slate-400;
+  }
+  
+  /* Animaciones Suaves */
+  .animate-on-scroll {
+    @apply opacity-0 translate-y-4 transition-all duration-500 ease-out;
+  }
+  
+  .animate-on-scroll.visible {
+    @apply opacity-100 translate-y-0;
+  }
+  
+  /* Focus Ring Premium */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-slate-500 dark:focus:ring-slate-400 focus:ring-offset-2 dark:focus:ring-offset-gray-950;
+  }
+  
+  /* Bordes Sutiles */
+  .border-subtle {
+    @apply border border-gray-200 dark:border-gray-800;
+  }
+  
+  /* Hover Lift Effect */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
+
+/* Animaciones para elementos que entran */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Respeta las preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mejoras de accesibilidad */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Print styles */
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

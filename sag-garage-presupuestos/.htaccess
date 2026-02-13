@@ -1,0 +1,54 @@
+# SAG Garage - Configuración Principal
+RewriteEngine On
+
+# ============================================
+# EXCLUIR /gestion/ de TODAS las reglas
+# La carpeta /gestion/ tiene su propio .htaccess
+# ============================================
+RewriteRule ^gestion/ - [L]
+
+# NO redirigir archivos estáticos (CSS, JS, imágenes) de la raíz
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^.*$ - [L]
+
+# Servir index.html para la raíz
+DirectoryIndex index.html
+
+# MIME Types - Configuración estricta
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js
+    AddType text/javascript .js
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/gif .gif
+    AddType image/svg+xml .svg
+    AddType image/webp .webp
+    AddType text/html .html
+</IfModule>
+
+# Forzar UTF-8
+AddDefaultCharset UTF-8
+
+# Comprimir archivos
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
+</IfModule>
+
+# Cache
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+</IfModule>
+
+# Prevenir listado de directorios
+Options -Indexes +FollowSymLinks
+
+# NO redirigir errores 404 para archivos estáticos
+# Solo mostrar página de error para rutas HTML
+<Files ~ "\.(css|js|jpg|jpeg|png|gif|svg|webp)$">
+    ErrorDocument 404 "File not found"
+</Files>

@@ -1,0 +1,10 @@
+export { ClienteSection } from './ClienteSection';
+export { VehiculoSection } from './VehiculoSection';
+export { InspeccionSection } from './InspeccionSection';
+export { ProblemaSection } from './ProblemaSection';
+export { ServiciosSection } from './ServiciosSection';
+export { RefaccionesSection } from './RefaccionesSection';
+export { ManoObraSection } from './ManoObraSection';
+export { ResumenSection } from './ResumenSection';
+export { GarantiaSection } from './GarantiaSection';
+export { PuntosSeguridadSection } from './PuntosSeguridadSection';

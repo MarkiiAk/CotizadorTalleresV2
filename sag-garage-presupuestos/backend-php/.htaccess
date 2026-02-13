@@ -1,0 +1,38 @@
+# Backend PHP - SAG Garage
+# Configuración para routing y seguridad
+
+# Habilitar rewrite engine
+RewriteEngine On
+
+# Prevenir acceso directo a archivos de configuración y controladores
+RewriteRule ^(config|controllers)/ - [F,L]
+
+# Redirigir todas las peticiones al index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Configurar headers de seguridad
+<IfModule mod_headers.c>
+    # Permitir CORS desde el dominio del frontend
+    Header set Access-Control-Allow-Origin "https://saggarage.com.mx"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header set Access-Control-Allow-Credentials "true"
+    
+    # Seguridad adicional
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Deshabilitar listado de directorios
+Options -Indexes
+
+# Configurar PHP
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>

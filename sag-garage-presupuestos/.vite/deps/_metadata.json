@@ -1,0 +1,67 @@
+{
+  "hash": "3015146f",
+  "configHash": "72a5ee26",
+  "lockfileHash": "2214ef6b",
+  "browserHash": "46d46425",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "81c5ba4a",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "7024e464",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "5b54af86",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "e32c8275",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "f7d5f788",
+      "needsInterop": false
+    },
+    "@react-pdf/renderer": {
+      "src": "../../node_modules/@react-pdf/renderer/lib/react-pdf.browser.js",
+      "file": "@react-pdf_renderer.js",
+      "fileHash": "c5fb76e5",
+      "needsInterop": false
+    },
+    "zustand": {
+      "src": "../../node_modules/zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "a9bec918",
+      "needsInterop": false
+    },
+    "framer-motion": {
+      "src": "../../node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "cc5ea8d5",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-3TYAS46Z": {
+      "file": "chunk-3TYAS46Z.js"
+    },
+    "chunk-XTCAPFNB": {
+      "file": "chunk-XTCAPFNB.js"
+    },
+    "chunk-JS3VXD4L": {
+      "file": "chunk-JS3VXD4L.js"
+    }
+  }
+}

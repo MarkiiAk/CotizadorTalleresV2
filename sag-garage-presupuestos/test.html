@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAG Garage - Deploy Test V2</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .status {
+            font-size: 1.2em;
+            margin: 15px 0;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 SAG Garage TalleresV2</h1>
+        <h2>Deploy Test Successful!</h2>
+        
+        <div class="status success">
+            ✅ FTP Deploy Pipeline Working
+        </div>
+        
+        <div class="info">
+            <strong>Destino:</strong> public_html/n3wv3r510nh1dd3n/
+        </div>
+        
+        <div class="info">
+            <strong>Repositorio:</strong> github.com/MarkiiAk/CotizadorTalleresV2
+        </div>
+        
+        <div class="info">
+            <strong>Timestamp:</strong> <span id="timestamp"></span>
+        </div>
+        
+        <div class="info">
+            <strong>Status:</strong> Ready para deploy completo del proyecto
+        </div>
+        
+        <p style="margin-top: 30px;">
+            🎯 Si ves este mensaje, el pipeline de CI/CD está funcionando correctamente
+        </p>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString('es-MX');
+    </script>
+</body>
+</html>
