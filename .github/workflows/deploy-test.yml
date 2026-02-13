@@ -1,29 +1,50 @@
-name: 'SAG Garage - Deploy Test V2'
+name: 'SAG Garage - Deploy Production'
 
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    paths:
+      - 'sag-garage-presupuestos/**'
   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy even if no changes detected'
+        required: false
+        default: 'false'
 
 jobs:
-  deploy-test:
+  deploy-production:
     runs-on: ubuntu-latest
-    name: 🚀 Deploy Test to SAG Garage Server
+    name: 🚀 Deploy SAG Garage to Production Server
 
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
 
-    - name: 📁 List files for debugging
-      run: |
-        echo "📂 Files in root directory:"
-        ls -la
-        echo "🎯 Looking for test.html:"
-        ls -la sag-garage-presupuestos/test.html || echo "❌ test.html not found"
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: sag-garage-presupuestos/package-lock.json
 
-    - name: 🌐 Deploy test.html via FTP
+    - name: 📦 Install dependencies
+      working-directory: sag-garage-presupuestos
+      run: npm ci
+
+    - name: 🏗️ Build production frontend
+      working-directory: sag-garage-presupuestos
+      run: npm run build
+
+    - name: 🔍 Verify build and setup production env
+      run: |
+        echo "✅ Build completed. Contents of dist:"
+        ls -la sag-garage-presupuestos/dist/
+        echo "🔧 Setting up production environment..."
+        cp sag-garage-presupuestos/backend-php/.env.production sag-garage-presupuestos/backend-php/.env
+        echo "✅ Production .env configured with NUEVA BASE saggarag_CotizadorTalleres"
+
+    - name: 🌐 Deploy complete project via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -38,32 +59,20 @@ jobs:
           **/.git*/**
           **/node_modules/**
           **/src/**
+          **/.env.example
+          **/.env.cpanel.example
+          **/package*.json
+          **/tsconfig*.json
+          **/tailwind.config.js
+          **/postcss.config.js
+          **/vite.config.ts
+          **/README.md
+          **/vercel.json
           **/tests/**
-          **/docs/**
-          **/database/**
-          **/backend/**
-          **/backend-php/**
-          **/public-site/**
-          **/deployment/**
-          **/project-management/**
           **/frontend/**
           **/frontend-htaccess/**
-          **/.env*
-          **/*.json
-          **/*.js
-          **/*.ts
-          **/*.tsx
-          **/*.md
-          **/*.sql
-          **/*.php
-          **/*.pdf
-          **/*.png
-          **/*.jpg
-          **/*.jpeg
-          **/*.webp
-          **/public/**
-          **/*
-          !test.html
+          **/deployment/**
+          **/project-management/**
 
     - name: ✅ Deploy Success Notification
       if: success()
