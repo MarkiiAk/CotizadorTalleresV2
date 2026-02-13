@@ -1,4 +1,4 @@
-# 🚗 SAG Garage - Sistema de Presupuestos y Órdenes de Servicio
+# 🚗 Cotizador Talleres - Sistema de Presupuestos y Órdenes de Servicio
 
 Sistema profesional de gestión de presupuestos y órdenes de servicio para talleres mecánicos, desarrollado con tecnologías modernas y diseño UX de primer nivel.
 
@@ -186,7 +186,7 @@ npm run dev
 
 1. Abre tu navegador en: `http://localhost:5173`
 2. Usa las credenciales de prueba:
-   - **Usuario**: `admin@saggarage.com`
+   - **Usuario**: `admin@cotizadortalleres.com`
    - **Contraseña**: `admin123`
 
 ## 📱 Uso del Sistema
@@ -308,7 +308,7 @@ Para dudas o problemas:
 
 ## 📄 Licencia
 
-Este proyecto es de uso privado para SAG Garage.
+Este proyecto es de uso privado para Cotizador Talleres.
 
 ## 🎉 Características Futuras Planeadas
 
@@ -323,6 +323,6 @@ Este proyecto es de uso privado para SAG Garage.
 
 ---
 
-**Desarrollado con ❤️ para SAG Garage**
+**Desarrollado con ❤️ para Cotizador Talleres**
 
 *Sistema de gestión profesional para talleres mecánicos del siglo XXI*

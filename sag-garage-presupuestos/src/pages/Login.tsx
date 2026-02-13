@@ -65,11 +65,11 @@ export const Login = () => {
           <div className="text-center space-y-2">
             <img 
               src="/logo.png" 
-              alt="SAG Garage Logo" 
+              alt="Cotizador Talleres Logo" 
               className="inline-block w-20 h-20 rounded-2xl object-cover mb-4 shadow-lg"
             />
             <h1 className="text-3xl font-bold bg-gradient-to-r from-sag-600 to-sag-600 bg-clip-text text-transparent">
-              SAG Garage
+              Cotizador Talleres
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Sistema de Gestión de Órdenes
@@ -202,7 +202,7 @@ export const Login = () => {
 
         {/* Footer */}
         <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
-          © 2026 SAG Garage. Todos los derechos reservados.
+          © 2026 Cotizador Talleres. Todos los derechos reservados.
         </p>
       </div>
     </div>
