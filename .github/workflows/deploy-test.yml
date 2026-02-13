@@ -26,12 +26,12 @@ jobs:
     - name: 🌐 Deploy test.html via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        server: ${{ secrets.FTP_HOST }}
+        server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         port: 21
         protocol: ftp
-        local-dir: ./
+        local-dir: ./sag-garage-presupuestos/
         server-dir: /public_html/n3wv3r510nh1dd3n/
         exclude: |
           **/.git*
@@ -62,8 +62,8 @@ jobs:
           **/*.jpeg
           **/*.webp
           **/public/**
-        include: |
-          sag-garage-presupuestos/test.html
+          **/*
+          !test.html
 
     - name: ✅ Deploy Success Notification
       if: success()
