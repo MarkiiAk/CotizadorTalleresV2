@@ -32,7 +32,7 @@ jobs:
         port: 21
         protocol: ftp
         local-dir: ./sag-garage-presupuestos/
-        server-dir: /public_html/n3wv3r510nh1dd3n/
+        server-dir: /n3wv3r510nh1dd3n/
         exclude: |
           **/.git*
           **/.git*/**
