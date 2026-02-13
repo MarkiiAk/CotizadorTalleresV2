@@ -1,0 +1,79 @@
+name: 'SAG Garage - Deploy Test V2'
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy Test to SAG Garage Server
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 📁 List files for debugging
+      run: |
+        echo "📂 Files in root directory:"
+        ls -la
+        echo "🎯 Looking for test.html:"
+        ls -la sag-garage-presupuestos/test.html || echo "❌ test.html not found"
+
+    - name: 🌐 Deploy test.html via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        protocol: ftp
+        local-dir: ./
+        server-dir: /public_html/n3wv3r510nh1dd3n/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/src/**
+          **/tests/**
+          **/docs/**
+          **/database/**
+          **/backend/**
+          **/backend-php/**
+          **/public-site/**
+          **/deployment/**
+          **/project-management/**
+          **/frontend/**
+          **/frontend-htaccess/**
+          **/.env*
+          **/*.json
+          **/*.js
+          **/*.ts
+          **/*.tsx
+          **/*.md
+          **/*.sql
+          **/*.php
+          **/*.pdf
+          **/*.png
+          **/*.jpg
+          **/*.jpeg
+          **/*.webp
+          **/public/**
+        include: |
+          sag-garage-presupuestos/test.html
+
+    - name: ✅ Deploy Success Notification
+      if: success()
+      run: |
+        echo "🎉 Deploy Test Successful!"
+        echo "📡 File uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
+        echo "🌐 Check: https://saggarage.com.mx/n3wv3r510nh1dd3n/test.html"
+
+    - name: ❌ Deploy Failed Notification
+      if: failure()
+      run: |
+        echo "💥 Deploy Test Failed!"
+        echo "🔧 Check FTP credentials and server connection"
