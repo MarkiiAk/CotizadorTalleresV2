@@ -1,144 +1,114 @@
 <?php
 /**
- * Utilidades JWT para autenticación
- * Implementación simple sin dependencias externas
+ * Configuración y manejo de JWT
  */
 
-class JWT {
-    private static $secret_key = 'sag-garage-secret-key-2026-change-in-production';
-    private static $algorithm = 'HS256';
+// Cargar variables de entorno si existe el archivo .env
+if (file_exists(__DIR__ . '/../.env.production')) {
+    $env = parse_ini_file(__DIR__ . '/../.env.production');
+    foreach ($env as $key => $value) {
+        $_ENV[$key] = $value;
+    }
+}
+
+// Configuración JWT
+define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? 'SagGarage_JWT_Secret_Key_2024_Production_V2');
+define('JWT_ALGORITHM', 'HS256');
+
+/**
+ * Función helper para requerir autenticación
+ */
+function requireAuth() {
+    $headers = getallheaders();
+    if (!$headers) {
+        $headers = apache_request_headers();
+    }
     
+    $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? null;
+    
+    if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
+        throw new Exception('Token de autorización requerido');
+    }
+    
+    $token = substr($authHeader, 7); // Remover "Bearer "
+    
+    try {
+        $decoded = JWT::decode($token);
+        return (array) $decoded;
+    } catch (Exception $e) {
+        throw new Exception('Token inválido: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Clase JWT para manejo de tokens
+ */
+class JWT {
     /**
-     * Genera un token JWT
+     * Codificar payload en token JWT
      */
-    public static function encode($payload) {
-        $header = json_encode(['typ' => 'JWT', 'alg' => self::$algorithm]);
+    public static function encode($payload, $key = null, $algorithm = null) {
+        $key = $key ?? JWT_SECRET;
+        $algorithm = $algorithm ?? JWT_ALGORITHM;
+        
+        $header = json_encode(['typ' => 'JWT', 'alg' => $algorithm]);
         $payload = json_encode($payload);
         
-        $base64UrlHeader = self::base64UrlEncode($header);
-        $base64UrlPayload = self::base64UrlEncode($payload);
+        $base64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+        $base64Payload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
         
-        $signature = hash_hmac(
-            'sha256',
-            $base64UrlHeader . "." . $base64UrlPayload,
-            self::$secret_key,
-            true
-        );
-        $base64UrlSignature = self::base64UrlEncode($signature);
+        $signature = hash_hmac('sha256', $base64Header . "." . $base64Payload, $key, true);
+        $base64Signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
         
-        return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+        return $base64Header . "." . $base64Payload . "." . $base64Signature;
     }
     
     /**
-     * Decodifica y verifica un token JWT
+     * Decodificar token JWT
      */
-    public static function decode($jwt) {
+    public static function decode($jwt, $key = null, $algorithm = null) {
+        $key = $key ?? JWT_SECRET;
+        $algorithm = $algorithm ?? JWT_ALGORITHM;
+        
         $tokenParts = explode('.', $jwt);
-        
         if (count($tokenParts) !== 3) {
-            throw new Exception('Token inválido');
+            throw new Exception('Token JWT inválido');
         }
         
-        list($header, $payload, $signature) = $tokenParts;
+        $header = json_decode(base64_decode($tokenParts[0]), true);
+        $payload = json_decode(base64_decode($tokenParts[1]), true);
+        $signature = $tokenParts[2];
         
-        // Verificar firma
-        $expectedSignature = hash_hmac(
-            'sha256',
-            $header . "." . $payload,
-            self::$secret_key,
-            true
-        );
-        $expectedSignature = self::base64UrlEncode($expectedSignature);
-        
-        if ($signature !== $expectedSignature) {
-            throw new Exception('Firma inválida');
+        // Verificar algoritmo
+        if (!isset($header['alg']) || $header['alg'] !== $algorithm) {
+            throw new Exception('Algoritmo no válido');
         }
-        
-        // Decodificar payload
-        $payload = json_decode(self::base64UrlDecode($payload), true);
         
         // Verificar expiración
         if (isset($payload['exp']) && $payload['exp'] < time()) {
             throw new Exception('Token expirado');
         }
         
-        return $payload;
-    }
-    
-    /**
-     * Obtiene el token del header Authorization
-     */
-    public static function getBearerToken() {
-        $headers = self::getAuthorizationHeader();
+        // Verificar firma
+        $expectedSignature = hash_hmac('sha256', $tokenParts[0] . "." . $tokenParts[1], $key, true);
+        $expectedSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($expectedSignature));
         
-        if (!empty($headers)) {
-            if (preg_match('/Bearer\s+(.*)$/i', $headers, $matches)) {
-                return $matches[1];
-            }
+        if ($signature !== $expectedSignature) {
+            throw new Exception('Firma de token inválida');
         }
         
-        return null;
+        return (object) $payload;
     }
     
     /**
-     * Obtiene el header Authorization
+     * Verificar si un token es válido
      */
-    private static function getAuthorizationHeader() {
-        $headers = null;
-        
-        if (isset($_SERVER['Authorization'])) {
-            $headers = trim($_SERVER["Authorization"]);
-        } elseif (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-            $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
-        } elseif (function_exists('apache_request_headers')) {
-            $requestHeaders = apache_request_headers();
-            $requestHeaders = array_combine(
-                array_map('ucwords', array_keys($requestHeaders)),
-                array_values($requestHeaders)
-            );
-            
-            if (isset($requestHeaders['Authorization'])) {
-                $headers = trim($requestHeaders['Authorization']);
-            }
+    public static function verify($jwt, $key = null) {
+        try {
+            self::decode($jwt, $key);
+            return true;
+        } catch (Exception $e) {
+            return false;
         }
-        
-        return $headers;
-    }
-    
-    /**
-     * Base64 URL encode
-     */
-    private static function base64UrlEncode($data) {
-        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data));
-    }
-    
-    /**
-     * Base64 URL decode
-     */
-    private static function base64UrlDecode($data) {
-        return base64_decode(str_replace(['-', '_'], ['+', '/'], $data));
-    }
-}
-
-/**
- * Middleware para verificar autenticación
- */
-function requireAuth() {
-    try {
-        $token = JWT::getBearerToken();
-        
-        if (!$token) {
-            http_response_code(401);
-            echo json_encode(['error' => 'No autorizado - Token no proporcionado']);
-            exit();
-        }
-        
-        $payload = JWT::decode($token);
-        return $payload;
-        
-    } catch (Exception $e) {
-        http_response_code(401);
-        echo json_encode(['error' => 'No autorizado - ' . $e->getMessage()]);
-        exit();
     }
 }

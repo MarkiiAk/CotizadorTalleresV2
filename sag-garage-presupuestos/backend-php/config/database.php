@@ -9,7 +9,7 @@ class Database {
     
     // Configuración de base de datos
     private $host = 'localhost';
-    private $dbname = 'saggarag_GestionPresupuestos';
+    private $dbname = 'saggarag_CotizadorTalleres';
     private $username = 'saggarag_admin';
     private $password = 'Kndiani2593!';
     private $charset = 'utf8mb4';
