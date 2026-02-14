@@ -45,7 +45,7 @@ jobs:
         echo "✅ Production .env configured with NUEVA BASE saggarag_CotizadorTalleres"
         echo "📁 Frontend build ready in dist/ folder"
 
-    - name: 🌐 Deploy frontend build via FTP (Clean Deploy)
+    - name: 🌐 Deploy frontend build via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -55,7 +55,6 @@ jobs:
         protocol: ftp
         local-dir: ./sag-garage-presupuestos/dist/
         server-dir: /n3wv3r510nh1dd3n/
-        dangerous-clean-slate: true
         exclude: |
           **/.git*
           **/.git*/**
@@ -74,7 +73,7 @@ jobs:
           **/.git*
           **/.git*/**
 
-    - name: 🔧 Deploy backend-php (Clean Deploy)
+    - name: 🔧 Deploy backend-php
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -84,7 +83,6 @@ jobs:
         protocol: ftp
         local-dir: ./sag-garage-presupuestos/backend-php/
         server-dir: /n3wv3r510nh1dd3n/backend-php/
-        dangerous-clean-slate: true
         exclude: |
           **/.git*
           **/.git*/**
