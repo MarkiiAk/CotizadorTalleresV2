@@ -4,8 +4,8 @@
  * Compatible con cPanel / Hosting compartido
  */
 
-// Configuración de CORS
-header('Access-Control-Allow-Origin: https://saggarage.com');
+// Configuración de CORS - Permitir origen del frontend
+header('Access-Control-Allow-Origin: https://saggarage.com.mx');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true');
@@ -41,9 +41,15 @@ $request_method = $_SERVER['REQUEST_METHOD'];
 // Remover query string y obtener path
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Remover el prefijo /gestion/backend-php/ de la URL
+// Remover el prefijo correcto según la URL del error
+$path = str_replace('/n3wv3r510nh1dd3n/backend-php/', '', $path);
 $path = str_replace('/gestion/backend-php/', '', $path);
 $path = trim($path, '/');
+
+// Log de debug para entender la ruta
+error_log("BACKEND PHP DEBUG - Request URI: " . $request_uri);
+error_log("BACKEND PHP DEBUG - Path procesado: " . $path);
+error_log("BACKEND PHP DEBUG - Method: " . $request_method);
 
 // Router simple
 try {
@@ -151,8 +157,27 @@ try {
     
     // Ruta no encontrada
     else {
+        error_log("BACKEND PHP ERROR - Ruta no encontrada: $path (método: $request_method)");
         http_response_code(404);
-        echo json_encode(['error' => 'Ruta no encontrada']);
+        echo json_encode([
+            'error' => 'Ruta no encontrada',
+            'path' => $path,
+            'method' => $request_method,
+            'request_uri' => $request_uri,
+            'available_routes' => [
+                'POST auth/login',
+                'GET auth/verify',
+                'GET auth/me',
+                'GET ordenes',
+                'POST ordenes',
+                'GET ordenes/{id}',
+                'PUT ordenes/{id}',
+                'DELETE ordenes/{id}',
+                'GET estados-seguridad',
+                'GET puntos-seguridad/catalogo',
+                'GET health'
+            ]
+        ]);
     }
     
 } catch (Exception $e) {
