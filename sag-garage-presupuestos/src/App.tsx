@@ -9,7 +9,7 @@ import { DetalleOrden } from './pages/DetalleOrden';
 
 function App() {
   return (
-    <BrowserRouter basename="/gestion">
+    <BrowserRouter basename="/n3wv3r510nh1dd3n">
       <ToastProvider>
         <AuthProvider>
           <Routes>

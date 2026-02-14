@@ -1,13 +1,13 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /gestion/
+  RewriteBase /n3wv3r510nh1dd3n/
   
   # Si el archivo o directorio existe, mostrarlo
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   
   # Si NO es una solicitud al backend-php, redirigir a index.html
-  RewriteCond %{REQUEST_URI} !^/gestion/backend-php/
+  RewriteCond %{REQUEST_URI} !^/n3wv3r510nh1dd3n/backend-php/
   
   # Redirigir todas las demás rutas a index.html para React Router
   RewriteRule ^ index.html [L]

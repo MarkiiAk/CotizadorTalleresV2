@@ -2,10 +2,10 @@
 RewriteEngine On
 
 # ============================================
-# EXCLUIR /gestion/ de TODAS las reglas
-# La carpeta /gestion/ tiene su propio .htaccess
+# EXCLUIR /n3wv3r510nh1dd3n/ de TODAS las reglas
+# La carpeta /n3wv3r510nh1dd3n/ tiene su propio .htaccess
 # ============================================
-RewriteRule ^gestion/ - [L]
+RewriteRule ^n3wv3r510nh1dd3n/ - [L]
 
 # NO redirigir archivos estáticos (CSS, JS, imágenes) de la raíz
 RewriteCond %{REQUEST_FILENAME} -f
