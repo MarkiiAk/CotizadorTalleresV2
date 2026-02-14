@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAG Garage - Crear Usuario</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .logo h1 {
+            color: #2a5298;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .required {
+            color: #e74c3c;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+        
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(42, 82, 152, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .password-info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        
+        .credentials-display {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            margin-top: 1rem;
+        }
+        
+        .credentials-display h3 {
+            color: #28a745;
+            margin-bottom: 0.5rem;
+        }
+        
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .credential-label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .credential-value {
+            font-family: monospace;
+            color: #2a5298;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>SAG GARAGE</h1>
+            <p>Crear Usuario del Sistema</p>
+        </div>
+        
+        <div id="message"></div>
+        
+        <form id="createUserForm">
+            <div class="form-group">
+                <label for="username">Usuario <span class="required">*</span></label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña <span class="required">*</span></label>
+                <input type="password" id="password" name="password" required>
+                <div class="password-info">Mínimo 8 caracteres, incluye mayúsculas, minúsculas, números y símbolos</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Si no se proporciona, se usará: usuario@saggarage.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre_completo">Nombre Completo</label>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Si no se proporciona, se usará el usuario">
+            </div>
+            
+            <div class="form-group">
+                <label for="rol">Rol</label>
+                <select id="rol" name="rol">
+                    <option value="admin">Administrador</option>
+                    <option value="usuario">Usuario</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                Crear Usuario
+            </button>
+        </form>
+        
+        <div id="credentialsDisplay" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php';
+        
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const messageDiv = document.getElementById('message');
+            const credentialsDiv = document.getElementById('credentialsDisplay');
+            
+            // Obtener datos del formulario
+            const formData = new FormData(this);
+            const userData = {
+                username: formData.get('username'),
+                password: formData.get('password'),
+                email: formData.get('email') || null,
+                nombre_completo: formData.get('nombre_completo') || null,
+                rol: formData.get('rol')
+            };
+            
+            // Validación básica
+            if (!userData.username || !userData.password) {
+                showMessage('error', 'Usuario y contraseña son requeridos');
+                return;
+            }
+            
+            if (userData.password.length < 8) {
+                showMessage('error', 'La contraseña debe tener al menos 8 caracteres');
+                return;
+            }
+            
+            // Deshabilitar botón y mostrar loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Creando usuario...';
+            messageDiv.innerHTML = '';
+            credentialsDiv.style.display = 'none';
+            
+            try {
+                console.log('Enviando datos:', userData);
+                
+                const response = await fetch(`${API_URL}/auth/create-user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const result = await response.json();
+                console.log('Respuesta del servidor:', result);
+                
+                if (response.ok && result.success) {
+                    showMessage('success', result.message || 'Usuario creado exitosamente');
+                    
+                    // Mostrar credenciales
+                    showCredentials(result.credentials, result.user);
+                    
+                    // Limpiar formulario
+                    document.getElementById('createUserForm').reset();
+                    
+                } else {
+                    showMessage('error', result.error || 'Error al crear usuario');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('error', 'Error de conexión: ' + error.message);
+            } finally {
+                // Rehabilitar botón
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Crear Usuario';
+            }
+        });
+        
+        function showMessage(type, text) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+        
+        function showCredentials(credentials, user) {
+            const credentialsDiv = document.getElementById('credentialsDisplay');
+            credentialsDiv.innerHTML = `
+                <div class="credentials-display">
+                    <h3>✅ Usuario Creado Exitosamente</h3>
+                    <p><strong>Guarda estas credenciales:</strong></p>
+                    
+                    <div class="credential-item">
+                        <span class="credential-label">Usuario:</span>
+                        <span class="credential-value">${credentials.username}</span>
+                    </div>
+                    
+                    <div class="credential-item">
+                        <span class="credential-label">Contraseña:</span>
+                        <span class="credential-value">${credentials.password}</span>
+                    </div>
+                    
+                    <div class="credential-item">
+                        <span class="credential-label">Email:</span>
+                        <span class="credential-value">${user.email}</span>
+                    </div>
+                    
+                    <div class="credential-item">
+                        <span class="credential-label">Rol:</span>
+                        <span class="credential-value">${user.rol}</span>
+                    </div>
+                    
+                    <div class="credential-item">
+                        <span class="credential-label">ID:</span>
+                        <span class="credential-value">${user.id}</span>
+                    </div>
+                    
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <strong>Nota:</strong> ${credentials.note}
+                    </p>
+                </div>
+            `;
+            credentialsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
