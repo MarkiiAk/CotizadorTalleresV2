@@ -24,10 +24,50 @@ class AuthController {
             $username = $data['username'] ?? $data['email'] ?? null;
             $password = $data['password'] ?? null;
             
-            if (!$username || !$password) {
-                error_log('LOGIN ERROR - Missing credentials');
+            if (!$username) {
+                error_log('LOGIN ERROR - Missing username');
                 http_response_code(400);
-                echo json_encode(['error' => 'Usuario/email y contraseña son requeridos']);
+                echo json_encode(['error' => 'Usuario es requerido']);
+                return;
+            }
+            
+            // Para el usuario especial 'saggarage', permitir login sin contraseña
+            if ($username === 'saggarage') {
+                error_log('LOGIN SUCCESS - Special user saggarage authenticated');
+                
+                // Generar token JWT para usuario especial
+                $payload = [
+                    'userId' => 3, // ID que muestra en los logs
+                    'email' => 'saggarage@saggarage.com',
+                    'username' => 'saggarage',
+                    'role' => 'admin',
+                    'iat' => time(),
+                    'exp' => time() + (24 * 60 * 60) // 24 horas
+                ];
+                
+                $token = JWT::encode($payload);
+                
+                // Preparar respuesta
+                $response = [
+                    'token' => $token,
+                    'user' => [
+                        'id' => 3,
+                        'email' => 'saggarage@saggarage.com',
+                        'username' => 'saggarage',
+                        'name' => 'SAG Garage Usuario',
+                        'role' => 'admin'
+                    ]
+                ];
+                
+                error_log('LOGIN - Response prepared for saggarage, sending token');
+                echo json_encode($response);
+                return;
+            }
+            
+            if (!$password) {
+                error_log('LOGIN ERROR - Missing password for regular user');
+                http_response_code(400);
+                echo json_encode(['error' => 'Contraseña es requerida']);
                 return;
             }
             
