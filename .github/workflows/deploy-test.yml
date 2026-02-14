@@ -45,7 +45,7 @@ jobs:
         echo "✅ Production .env configured with NUEVA BASE saggarag_CotizadorTalleres"
         echo "📁 Frontend build ready in dist/ folder"
 
-    - name: 🌐 Deploy complete project via FTP
+    - name: 🌐 Deploy frontend build via FTP (Clean Deploy)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -53,35 +53,50 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         port: 21
         protocol: ftp
-        local-dir: ./sag-garage-presupuestos/
+        local-dir: ./sag-garage-presupuestos/dist/
+        server-dir: /n3wv3r510nh1dd3n/
+        dangerous-clean-slate: true
+        exclude: |
+          **/.git*
+          **/.git*/**
+
+    - name: 🔧 Deploy .htaccess for frontend
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        protocol: ftp
+        local-dir: ./sag-garage-presupuestos/frontend-htaccess/
         server-dir: /n3wv3r510nh1dd3n/
         exclude: |
           **/.git*
           **/.git*/**
-          **/node_modules/**
-          **/src/**
-          **/.env.example
-          **/.env.cpanel.example
-          **/package*.json
-          **/tsconfig*.json
-          **/tailwind.config.js
-          **/postcss.config.js
-          **/vite.config.ts
-          **/README.md
-          **/vercel.json
-          **/tests/**
-          **/frontend/**
-          **/frontend-htaccess/**
-          **/deployment/**
-          **/project-management/**
+
+    - name: 🔧 Deploy backend-php (Clean Deploy)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        protocol: ftp
+        local-dir: ./sag-garage-presupuestos/backend-php/
+        server-dir: /backend-php/
+        dangerous-clean-slate: true
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/.env
 
     - name: ✅ Deploy Success Notification
       if: success()
       run: |
         echo "🎉 Deploy Complete - Cotizador Talleres Ready!"
         echo "📡 Files uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
-        echo "🌐 Frontend App: https://saggarage.com.mx/n3wv3r510nh1dd3n/dist/"
-        echo "🔧 Backend API: https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php/"
+        echo "🌐 Frontend App: https://saggarage.com.mx/n3wv3r510nh1dd3n/"
+        echo "🔧 Backend API: https://saggarage.com.mx/backend-php/"
         echo "✅ NUEVA BASE: saggarag_CotizadorTalleres"
 
     - name: ❌ Deploy Failed Notification
