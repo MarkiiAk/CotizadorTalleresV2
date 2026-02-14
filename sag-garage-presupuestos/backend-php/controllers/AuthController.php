@@ -170,4 +170,92 @@ class AuthController {
             ]);
         }
     }
+    
+    /**
+     * Crear usuario - POST /api/auth/create-user
+     * RUTA ABIERTA - NO REQUIERE AUTENTICACIÓN
+     */
+    public function createUser() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            error_log('CREATE USER - Data received: ' . json_encode($data));
+            
+            // Validar campos requeridos
+            $username = $data['username'] ?? null;
+            $email = $data['email'] ?? null;
+            $password = $data['password'] ?? null;
+            $nombre_completo = $data['nombre_completo'] ?? $username;
+            $rol = $data['rol'] ?? 'admin';
+            
+            if (!$username || !$password) {
+                error_log('CREATE USER ERROR - Missing required fields');
+                http_response_code(400);
+                echo json_encode(['error' => 'Username y password son requeridos']);
+                return;
+            }
+            
+            // Si no se proporciona email, usar username@saggarage.com
+            if (!$email) {
+                $email = $username . '@saggarage.com';
+            }
+            
+            // Verificar si el usuario ya existe
+            $stmt = $this->db->prepare('SELECT id FROM usuarios WHERE username = ? OR email = ? LIMIT 1');
+            $stmt->execute([$username, $email]);
+            if ($stmt->fetch()) {
+                error_log('CREATE USER ERROR - User already exists: ' . $username);
+                http_response_code(409);
+                echo json_encode(['error' => 'El usuario ya existe']);
+                return;
+            }
+            
+            // Hashear contraseña
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            error_log('CREATE USER - Password hashed successfully');
+            
+            // Insertar usuario
+            $stmt = $this->db->prepare('
+                INSERT INTO usuarios (username, email, password_hash, nombre_completo, rol, activo, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
+            ');
+            
+            $result = $stmt->execute([$username, $email, $password_hash, $nombre_completo, $rol]);
+            
+            if ($result) {
+                $userId = $this->db->lastInsertId();
+                error_log('CREATE USER SUCCESS - User created with ID: ' . $userId);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Usuario creado exitosamente',
+                    'user' => [
+                        'id' => $userId,
+                        'username' => $username,
+                        'email' => $email,
+                        'nombre_completo' => $nombre_completo,
+                        'rol' => $rol
+                    ],
+                    'credentials' => [
+                        'username' => $username,
+                        'password' => $password,
+                        'note' => 'Guarda estas credenciales para hacer login'
+                    ]
+                ]);
+            } else {
+                error_log('CREATE USER ERROR - Database error');
+                http_response_code(500);
+                echo json_encode(['error' => 'Error al crear usuario en la base de datos']);
+            }
+            
+        } catch (Exception $e) {
+            error_log('CREATE USER EXCEPTION - ' . $e->getMessage());
+            error_log('CREATE USER EXCEPTION - Stack trace: ' . $e->getTraceAsString());
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Error al crear usuario',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
 }

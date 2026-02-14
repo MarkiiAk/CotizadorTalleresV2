@@ -66,6 +66,10 @@ try {
         $controller = new AuthController();
         $controller->me();
     }
+    elseif ($path === 'auth/create-user' && $request_method === 'POST') {
+        $controller = new AuthController();
+        $controller->createUser();
+    }
     
     // Rutas de órdenes
     elseif ($path === 'ordenes' && $request_method === 'GET') {
