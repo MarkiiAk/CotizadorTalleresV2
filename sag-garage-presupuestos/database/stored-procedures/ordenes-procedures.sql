@@ -131,7 +131,7 @@ DROP PROCEDURE IF EXISTS sp_ordenes_count_filtered$$
 CREATE PROCEDURE sp_ordenes_count_filtered(
     IN p_estado_id INT,
     IN p_prioridad VARCHAR(20),
-    IN p_fecha_desdeQ DATE,
+    IN p_fecha_desde DATE,
     IN p_fecha_hasta DATE,
     IN p_cliente_nombre VARCHAR(255),
     IN p_vehiculo_placas VARCHAR(20)
