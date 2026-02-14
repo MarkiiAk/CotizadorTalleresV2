@@ -1,4 +1,4 @@
-name: 'Cotizador Talleres - Deploy Production'
+name: 'Cotizador Talleres - Deploy to cPanel'
 
 on:
   push:
@@ -6,99 +6,216 @@ on:
     paths:
       - 'sag-garage-presupuestos/**'
   workflow_dispatch:
-    inputs:
-      force_deploy:
-        description: 'Force deploy even if no changes detected'
-        required: false
-        default: 'false'
 
 jobs:
-  deploy-production:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    name: 🚀 Deploy Cotizador Talleres to Production Server
-
+    
     steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      # 1. Descargar el código del repositorio
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
 
-    - name: 🔧 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: sag-garage-presupuestos/package-lock.json
+      # 2. Configurar Node.js
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: sag-garage-presupuestos/package-lock.json
 
-    - name: 📦 Install dependencies
-      working-directory: sag-garage-presupuestos
-      run: npm ci
+      # 3. Instalar dependencias
+      - name: 📦 Instalar dependencias
+        working-directory: sag-garage-presupuestos
+        run: npm ci
 
-    - name: 🏗️ Build production frontend
-      working-directory: sag-garage-presupuestos
-      run: npm run build
+      # 4. Compilar el proyecto React
+      - name: 🏗️ Build proyecto React
+        working-directory: sag-garage-presupuestos
+        run: npm run build
+        env:
+          NODE_ENV: production
 
-    - name: 🔍 Verify build and setup production env
-      run: |
-        echo "✅ Build completed. Contents of dist:"
-        ls -la sag-garage-presupuestos/dist/
-        echo "🔧 Setting up production environment..."
-        cp sag-garage-presupuestos/backend-php/.env.production sag-garage-presupuestos/backend-php/.env
-        echo "✅ Production .env configured with NUEVA BASE saggarag_CotizadorTalleres"
-        echo "📁 Frontend build ready in dist/ folder"
+      # 5. Verificar que el build se creó correctamente
+      - name: ✅ Verificar build
+        run: |
+          if [ ! -d "sag-garage-presupuestos/dist" ]; then
+            echo "❌ Error: La carpeta dist no se generó"
+            exit 1
+          fi
+          echo "✅ Build generado correctamente"
+          ls -la sag-garage-presupuestos/dist/
 
-    - name: 🌐 Deploy frontend build via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        port: 21
-        protocol: ftp
-        local-dir: ./sag-garage-presupuestos/dist/
-        server-dir: /n3wv3r510nh1dd3n/
-        exclude: |
-          **/.git*
-          **/.git*/**
+      # 6. Preparar estructura de deploy
+      - name: 📦 Preparar estructura de deploy
+        run: |
+          echo "📁 Creando estructura de deploy..."
+          mkdir -p deploy-temp
+          
+          # Copiar sitio público (public-site) a la raíz
+          echo "📄 Copiando sitio público completo..."
+          cp sag-garage-presupuestos/public-site/index.html deploy-temp/
+          cp sag-garage-presupuestos/public-site/logo.jpg deploy-temp/ 2>/dev/null || true
+          cp sag-garage-presupuestos/public-site/logo.png deploy-temp/ 2>/dev/null || true
+          cp sag-garage-presupuestos/public-site/DatosBancarios.jpeg deploy-temp/ 2>/dev/null || true
+          cp sag-garage-presupuestos/public-site/ManualCorporativo.pdf deploy-temp/ 2>/dev/null || true
+          cp -r sag-garage-presupuestos/public-site/css deploy-temp/ 2>/dev/null || true
+          cp -r sag-garage-presupuestos/public-site/js deploy-temp/ 2>/dev/null || true
+          cp -r sag-garage-presupuestos/public-site/img deploy-temp/ 2>/dev/null || true
+          
+          # Copiar .htaccess de public-site
+          echo "⚙️ Copiando .htaccess raíz..."
+          cp sag-garage-presupuestos/public-site/.htaccess deploy-temp/ 2>/dev/null || true
+          
+          # Copiar la aplicación React a la carpeta n3wv3r510nh1dd3n/
+          echo "⚛️  Copiando aplicación React..."
+          cp -r sag-garage-presupuestos/dist deploy-temp/n3wv3r510nh1dd3n
+          
+          echo "✅ Estructura preparada:"
+          ls -la deploy-temp/
+          echo ""
+          echo "📂 Contenido de n3wv3r510nh1dd3n/:"
+          ls -la deploy-temp/n3wv3r510nh1dd3n/
 
-    - name: 🔧 Deploy .htaccess for frontend
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        port: 21
-        protocol: ftp
-        local-dir: ./sag-garage-presupuestos/frontend-htaccess/
-        server-dir: /n3wv3r510nh1dd3n/
-        exclude: |
-          **/.git*
-          **/.git*/**
+      # 7. Subir sitio público a raíz de cPanel
+      - name: 🚀 Deploy sitio público a raíz
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          
+          # Subir solo el sitio público a la raíz
+          local-dir: deploy-temp/
+          server-dir: ./
+          
+          dangerous-clean-slate: false
+          
+          exclude: |
+            **/n3wv3r510nh1dd3n/**
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.vscode/**
+            **/.DS_Store
+          
+          security: strict
+          timeout: 600000
 
-    - name: 🔧 Deploy backend-php
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        port: 21
-        protocol: ftp
-        local-dir: ./sag-garage-presupuestos/backend-php/
-        server-dir: /n3wv3r510nh1dd3n/backend-php/
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/.env
+      # 8. Subir aplicación React a carpeta /n3wv3r510nh1dd3n/
+      - name: 🚀 Deploy aplicación React a /n3wv3r510nh1dd3n/
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          
+          # Subir contenido de n3wv3r510nh1dd3n/ a la carpeta remota
+          local-dir: deploy-temp/n3wv3r510nh1dd3n/
+          server-dir: ./n3wv3r510nh1dd3n/
+          
+          dangerous-clean-slate: false
+          
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.vscode/**
+            **/.DS_Store
+            **/backend-php/**
+          
+          security: strict
+          timeout: 600000
 
-    - name: ✅ Deploy Success Notification
-      if: success()
-      run: |
-        echo "🎉 Deploy Complete - Cotizador Talleres Ready!"
-        echo "📡 Files uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
-        echo "🌐 Frontend App: https://saggarage.com.mx/n3wv3r510nh1dd3n/"
-        echo "🔧 Backend API: https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php/"
-        echo "✅ NUEVA BASE: saggarag_CotizadorTalleres"
+      # 9. Subir Backend PHP a /n3wv3r510nh1dd3n/backend-php/
+      - name: 🐘 Deploy Backend PHP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          
+          # Subir backend PHP
+          local-dir: sag-garage-presupuestos/backend-php/
+          server-dir: ./n3wv3r510nh1dd3n/backend-php/
+          
+          dangerous-clean-slate: true
+          
+          exclude: |
+            **/.git
+            **/.github/**
+            **/.gitignore
+            **/node_modules/**
+            **/.vscode/**
+            **/.DS_Store
+            **/.env
+            **/.env.example
+          
+          log-level: verbose
+          security: loose
+          timeout: 900000
 
-    - name: ❌ Deploy Failed Notification
-      if: failure()
-      run: |
-        echo "💥 Deploy Test Failed!"
-        echo "🔧 Check FTP credentials and server connection"
+      # 10. Configurar .env de producción
+      - name: 🔧 Configurar .env de producción
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          
+          local-dir: sag-garage-presupuestos/backend-php/
+          server-dir: ./n3wv3r510nh1dd3n/backend-php/
+          
+          dangerous-clean-slate: false
+          
+          # Solo subir .env.production como .env
+          exclude: |
+            **/*
+            !**/.env.production
+          
+          log-level: verbose
+          security: loose
+          timeout: 300000
+
+      # 11. Subir .htaccess del frontend para React Router
+      - name: 📄 Upload frontend .htaccess
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          
+          local-dir: sag-garage-presupuestos/frontend-htaccess/
+          server-dir: ./n3wv3r510nh1dd3n/
+          
+          dangerous-clean-slate: false
+          
+          exclude: |
+            **/*
+            !**/.htaccess
+          
+          log-level: verbose
+          security: loose
+          timeout: 300000
+
+      # 12. Notificación de éxito
+      - name: ✅ Deploy completado
+        if: success()
+        run: |
+          echo "🎉 ¡Deploy exitoso a cPanel!"
+          echo "🌐 Frontend: https://saggarage.com.mx/n3wv3r510nh1dd3n/"
+          echo "🔧 Backend: https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php/"
+          echo "🏠 Sitio público: https://saggarage.com.mx/"
+          echo "⏰ Fecha: $(date)"
+
+      # 13. Notificación de error
+      - name: ❌ Deploy falló
+        if: failure()
+        run: |
+          echo "❌ Hubo un error en el deploy"
+          echo "Revisa los logs arriba para más detalles"
