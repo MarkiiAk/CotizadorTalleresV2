@@ -83,7 +83,7 @@ jobs:
         port: 21
         protocol: ftp
         local-dir: ./sag-garage-presupuestos/backend-php/
-        server-dir: /backend-php/
+        server-dir: /n3wv3r510nh1dd3n/backend-php/
         dangerous-clean-slate: true
         exclude: |
           **/.git*
@@ -96,7 +96,7 @@ jobs:
         echo "🎉 Deploy Complete - Cotizador Talleres Ready!"
         echo "📡 Files uploaded to: ftp.saggarage.com.mx/public_html/n3wv3r510nh1dd3n/"
         echo "🌐 Frontend App: https://saggarage.com.mx/n3wv3r510nh1dd3n/"
-        echo "🔧 Backend API: https://saggarage.com.mx/backend-php/"
+        echo "🔧 Backend API: https://saggarage.com.mx/n3wv3r510nh1dd3n/backend-php/"
         echo "✅ NUEVA BASE: saggarag_CotizadorTalleres"
 
     - name: ❌ Deploy Failed Notification
