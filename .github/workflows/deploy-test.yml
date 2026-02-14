@@ -76,6 +76,10 @@ jobs:
           echo "⚛️  Copiando aplicación React..."
           cp -r sag-garage-presupuestos/dist deploy-temp/n3wv3r510nh1dd3n
           
+          # Copiar create-user.html específicamente
+          echo "👤 Copiando create-user.html..."
+          cp sag-garage-presupuestos/n3wv3r510nh1dd3n/create-user.html deploy-temp/n3wv3r510nh1dd3n/ 2>/dev/null || true
+          
           echo "✅ Estructura preparada:"
           ls -la deploy-temp/
           echo ""
