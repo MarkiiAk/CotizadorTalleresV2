@@ -14,6 +14,9 @@ RewriteRule ^.*$ - [L]
 # Servir index.html para la raíz
 DirectoryIndex index.html
 
+# Permitir acceso a create-user.html específicamente
+RewriteRule ^create-user\.html$ - [L]
+
 # MIME Types - Configuración estricta
 <IfModule mod_mime.c>
     AddType text/css .css
