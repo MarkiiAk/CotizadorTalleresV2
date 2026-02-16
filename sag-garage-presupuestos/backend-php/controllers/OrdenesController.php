@@ -779,22 +779,6 @@ class OrdenesController {
             }
         }
     }
-        // Actualizar puntos de seguridad
-        if (isset($data['puntosSeguridad'])) {
-            $this->db->prepare('DELETE FROM orden_puntos_seguridad WHERE orden_id = ?')->execute([$orden_id]);
-            if (!empty($data['puntosSeguridad'])) {
-                $this->insertPuntosSeguridad($orden_id, $data['puntosSeguridad']);
-            }
-        }
-        
-        // Actualizar daños adicionales
-        if (isset($data['inspeccion']['danosAdicionales'])) {
-            $this->db->prepare('DELETE FROM danos_adicionales WHERE orden_servicio_id = ?')->execute([$orden_id]);
-            if (!empty($data['inspeccion']['danosAdicionales'])) {
-                $this->insertDanosAdicionales($orden_id, $data['inspeccion']['danosAdicionales']);
-            }
-        }
-    }
     
     private function mapearElementoKey($nombreElemento) {
         // Mapeo COMPLETO de nombres en schema-v2.sql a keys EXACTAS del frontend
