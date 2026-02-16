@@ -182,6 +182,7 @@ export interface Orden {
   id: string;
   folio: string;
   estado: 'abierta' | 'cerrada' | 'pendiente'; // 'pendiente' para compatibilidad con datos antiguos
+  estado_id?: number; // ID del estado de la orden (viene del backend PHP)
   fechaCreacion: string;
   fechaActualizacion: string;
   fechaCierre?: string;
