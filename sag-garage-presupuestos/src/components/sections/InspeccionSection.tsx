@@ -3,75 +3,38 @@ import { ClipboardCheck, X, AlertTriangle } from 'lucide-react';
 import { Card, Input, Button } from '../ui';
 import { usePresupuestoStore } from '../../store/usePresupuestoStore';
 import { DanoVehiculo, ElementoInspeccion } from '../../types';
-import { elementosInspeccionAPI } from '../../services/api';
+import { useElementosInspeccion } from '../../contexts/ElementosInspeccionContext';
 
 interface InspeccionSectionProps {
   disabled?: boolean;
-  elementosInspeccion?: any[];
 }
 
-export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false, elementosInspeccion: elementosExterno = [] }) => {
+export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false }) => {
   const { presupuesto } = usePresupuestoStore();
+  const { elementos, isLoading, loadElementos } = useElementosInspeccion();
   const [elementosExteriores, setElementosExteriores] = React.useState<ElementoInspeccion[]>([]);
   const [elementosInteriores, setElementosInteriores] = React.useState<ElementoInspeccion[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
 
-  // Cargar elementos de inspección (usar prop si está disponible, sino desde API directa)
+  // Cargar elementos de inspección usando el contexto
   React.useEffect(() => {
-    const cargarElementos = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Si ya tenemos elementos desde el prop, úsalos directamente
-        if (elementosExterno && elementosExterno.length > 0) {
-          console.log('📦 Usando elementos de inspección del prop:', elementosExterno.length, 'elementos');
-          
-          // Procesar elementos del prop
-          const exteriores = elementosExterno
-            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
-            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
-          
-          const interiores = elementosExterno
-            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
-            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
-            
-          setElementosExteriores(exteriores);
-          setElementosInteriores(interiores);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Si no hay prop, cargar desde API directamente
-        console.log('🔄 Cargando elementos desde API directa...');
-        const response = await elementosInspeccionAPI.getElementos();
-        
-        if (Array.isArray(response)) {
-          // Procesar elementos de la API
-          const exteriores = response
-            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
-            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
-          
-          const interiores = response
-            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
-            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+    loadElementos();
+  }, [loadElementos]);
 
-          console.log('✅ Elementos cargados desde API directa:', { exteriores: exteriores.length, interiores: interiores.length });
-          setElementosExteriores(exteriores);
-          setElementosInteriores(interiores);
-        } else {
-          throw new Error('Formato de respuesta inválido');
-        }
-      } catch (error) {
-        console.error('❌ Error cargando elementos de inspección:', error);
-        setElementosExteriores([]);
-        setElementosInteriores([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    cargarElementos();
-  }, [elementosExterno]);
+  // Procesar elementos cuando cambien
+  React.useEffect(() => {
+    if (elementos && elementos.length > 0) {
+      const exteriores = elementos
+        .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
+        .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+      
+      const interiores = elementos
+        .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
+        .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        
+      setElementosExteriores(exteriores);
+      setElementosInteriores(interiores);
+    }
+  }, [elementos]);
   
   // Crear estructura dinámica de inspección basada en elementos de BD
   const inspeccion = React.useMemo(() => {

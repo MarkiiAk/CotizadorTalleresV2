@@ -459,10 +459,9 @@ export const DetalleOrden = () => {
           <ProblemaSection disabled={isSectionReadonly('problema')} />
 
           {/* Inspección Visual del Vehículo - Siempre visible */}
-          <InspeccionSection 
-            disabled={isSectionReadonly('inspeccionVisual')} 
-            elementosInspeccion={elementosInspeccion}
-          />
+            <InspeccionSection 
+              disabled={true} 
+            />
 
           {/* Puntos de Seguridad - Desde EN DIAGNÓSTICO */}
           {shouldShowSection('puntosSeguridad') && (
