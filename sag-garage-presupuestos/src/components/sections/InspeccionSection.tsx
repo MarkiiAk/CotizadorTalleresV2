@@ -57,13 +57,13 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
     // Inicializar exteriores dinámicamente
     elementosExteriores.forEach(elemento => {
       const fieldKey = elemento.key.replace('ext_', '');
-      baseInspeccion.exteriores[fieldKey] = presupuesto.inspeccion?.exteriores?.[fieldKey] || false;
+      baseInspeccion.exteriores[fieldKey] = (presupuesto.inspeccion?.exteriores as any)?.[fieldKey] || false;
     });
 
     // Inicializar interiores dinámicamente
     elementosInteriores.forEach(elemento => {
       const fieldKey = elemento.key.replace('int_', '');
-      baseInspeccion.interiores[fieldKey] = presupuesto.inspeccion?.interiores?.[fieldKey] || false;
+      baseInspeccion.interiores[fieldKey] = (presupuesto.inspeccion?.interiores as any)?.[fieldKey] || false;
     });
 
     return baseInspeccion;
