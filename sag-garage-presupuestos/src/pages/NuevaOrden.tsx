@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Moon, FileText, Download, Save, ArrowLeft } from 'lucide-react';
-import { pdf } from '@react-pdf/renderer';
+import { Sun, Moon, FileText, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePresupuestoStore } from '../store/usePresupuestoStore';
 import { ordenesAPI } from '../services/api';
@@ -12,15 +11,8 @@ import {
   VehiculoSection,
   InspeccionSection,
   ProblemaSection,
-  ServiciosSection,
-  RefaccionesSection,
-  ManoObraSection,
-  ResumenSection,
-  GarantiaSection,
-  PuntosSeguridadSection,
 } from '../components/sections';
 import { Button } from '../components/ui';
-import { PDFDocument } from '../components/PDFDocument';
 
 export const NuevaOrden = () => {
   const navigate = useNavigate();
@@ -41,38 +33,6 @@ export const NuevaOrden = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [themeMode]);
-
-  // Calcular resumen al cargar
-  useEffect(() => {
-    usePresupuestoStore.getState().calcularResumen();
-  }, []);
-
-  const handleGeneratePDF = async () => {
-    try {
-      const blob = await pdf(<PDFDocument presupuesto={presupuesto} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const nombreCliente = presupuesto.cliente.nombreCompleto.replace(/\s+/g, '_').toUpperCase();
-      const modelo = presupuesto.vehiculo.modelo.replace(/\s+/g, '_').toUpperCase();
-      link.download = `SAG_Garage_${presupuesto.folio}_${modelo}_${nombreCliente}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      showSuccess(
-        'PDF Generado',
-        'El archivo PDF se ha descargado correctamente'
-      );
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-      showError(
-        'Error al generar PDF',
-        'No se pudo generar el archivo PDF. Intenta de nuevo.'
-      );
-    }
-  };
 
   // Función para validar campos requeridos del cliente
   const validateCliente = () => {
@@ -126,12 +86,24 @@ export const NuevaOrden = () => {
     return errors;
   };
 
-  // Función para validar todos los campos
+  // Función para validar problema reportado
+  const validateProblema = () => {
+    const errors: string[] = [];
+    
+    if (!presupuesto.problemaReportado?.trim()) {
+      errors.push('El problema reportado por el cliente es requerido');
+    }
+    
+    return errors;
+  };
+
+  // Función para validar todos los campos de ETAPA 1
   const validateForm = () => {
     const clienteErrors = validateCliente();
     const vehiculoErrors = validateVehiculo();
+    const problemaErrors = validateProblema();
     
-    const allErrors = [...clienteErrors, ...vehiculoErrors];
+    const allErrors = [...clienteErrors, ...vehiculoErrors, ...problemaErrors];
     
     if (allErrors.length > 0) {
       showError(
@@ -155,7 +127,7 @@ export const NuevaOrden = () => {
     try {
       setShowLoader(true);
       
-      // Convertir presupuesto a Orden
+      // Convertir presupuesto a Orden - SOLO ETAPA 1
       const orden = {
         id: presupuesto.id,
         folio: presupuesto.folio,
@@ -167,28 +139,36 @@ export const NuevaOrden = () => {
         },
         inspeccion: presupuesto.inspeccion,
         problemaReportado: presupuesto.problemaReportado,
-        diagnosticoTecnico: presupuesto.diagnosticoTecnico,
-        servicios: presupuesto.servicios,
-        refacciones: presupuesto.refacciones,
-        manoDeObra: presupuesto.manoDeObra,
-        resumen: presupuesto.resumen,
-        puntosSeguridad: presupuesto.puntosSeguridad || [],
-        fechaSalida: presupuesto.fechaSalida?.toISOString() || null,
+        // NO incluir campos de etapas posteriores
+        diagnosticoTecnico: '', // Vacío inicialmente
+        servicios: [],
+        refacciones: [],
+        manoDeObra: [],
+        resumen: { servicios: 0, refacciones: 0, manoDeObra: 0, subtotal: 0, incluirIVA: false, iva: 0, total: 0, anticipo: 0, restante: 0 },
+        puntosSeguridad: [],
+        fechaSalida: null,
         fechaEntrada: presupuesto.fechaEntrada?.toISOString() || presupuesto.fecha.toISOString(),
         estado: 'abierta' as const,
+        estado_id: 1, // RECIBIDO
         fechaCreacion: presupuesto.fecha.toISOString(),
         fechaModificacion: new Date().toISOString(),
       };
       
-      console.log('💾 Guardando orden en API...');
+      console.log('💾 Guardando orden ETAPA 1 en API...');
       const result = await ordenesAPI.create(orden);
-      console.log('✅ Orden guardada exitosamente');
+      console.log('✅ Orden ETAPA 1 guardada exitosamente');
       
       markAsSaved();
       showSuccess(
         'Orden guardada exitosamente',
-        `La orden ${result.folio} ha sido creada correctamente`
+        `La orden ${result.folio} ha sido creada en estado RECIBIDO`
       );
+      
+      // Redireccionar al detalle de la orden para continuar el flujo
+      setTimeout(() => {
+        navigate(`/orden/${result.id}`);
+      }, 2000);
+      
     } catch (error) {
       console.error('Error al guardar la orden:', error);
       setShowLoader(false);
@@ -199,9 +179,8 @@ export const NuevaOrden = () => {
   const handleLoaderComplete = () => {
     setShowLoader(false);
     resetPresupuesto();
-    navigate('/dashboard');
+    // No navegamos aquí, se hace en el success
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
@@ -226,7 +205,7 @@ export const NuevaOrden = () => {
                   Nueva Orden
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Crear presupuesto
+                  Recepción inicial - Solo datos básicos
                 </p>
               </div>
             </div>
@@ -250,17 +229,7 @@ export const NuevaOrden = () => {
                 disabled={showLoader}
                 className="hidden md:flex"
               >
-                Guardar Orden
-              </Button>
-
-              {/* Generar PDF */}
-              <Button
-                variant="success"
-                onClick={handleGeneratePDF}
-                icon={<Download size={20} />}
-                className="hidden md:flex"
-              >
-                Generar PDF
+                Crear Orden
               </Button>
             </div>
           </div>
@@ -274,15 +243,7 @@ export const NuevaOrden = () => {
               disabled={showLoader}
               className="flex-1 !text-sm"
             >
-              Guardar
-            </Button>
-            <Button
-              variant="success"
-              onClick={handleGeneratePDF}
-              icon={<Download size={18} />}
-              className="flex-1 !text-sm"
-            >
-              PDF
+              Crear Orden
             </Button>
           </div>
         </div>
@@ -290,39 +251,42 @@ export const NuevaOrden = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Información del Vehículo */}
-          <VehiculoSection />
-
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* Información del Cliente */}
           <ClienteSection />
 
-          {/* Inspección Visual del Vehículo */}
-          <InspeccionSection />
+          {/* Información del Vehículo */}
+          <VehiculoSection />
 
-          {/* Puntos de Seguridad */}
-          <PuntosSeguridadSection 
-            puntosSeguridad={presupuesto.puntosSeguridad || []}
-            onChange={(puntos) => usePresupuestoStore.getState().updatePuntosSeguridad(puntos)}
-          />
-
-          {/* Problema y Diagnóstico */}
+          {/* Problema Reportado */}
           <ProblemaSection />
 
-          {/* Servicios */}
-          <ServiciosSection />
+          {/* Inspección Visual del Vehículo - SOLO VISUAL BÁSICA */}
+          <InspeccionSection />
 
-          {/* Refacciones y Mano de Obra */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RefaccionesSection />
-            <ManoObraSection />
+          {/* Mensaje informativo */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FileText className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Información importante
+                </h3>
+                <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                  <p>
+                    Esta es la recepción inicial. Una vez guardada la orden, podrás continuar con:
+                  </p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Diagnóstico técnico detallado</li>
+                    <li>Inspección de puntos de seguridad</li>
+                    <li>Cotización de servicios y refacciones</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
-
-          {/* Resumen Financiero */}
-          <ResumenSection />
-
-          {/* Garantía */}
-          <GarantiaSection />
         </div>
       </main>
 

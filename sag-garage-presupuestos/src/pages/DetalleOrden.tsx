@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Sun, Moon, FileText, Download, Save, ArrowLeft, X } from 'lucide-react';
+import { Sun, Moon, FileText, Download, Save, ArrowLeft, X, PlayCircle, CheckCircle } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePresupuestoStore } from '../store/usePresupuestoStore';
 import { ordenesAPI } from '../services/api';
 import { GarageLoader } from '../components/ui/GarageLoader';
 import { mergePDFWithGarantia } from '../utils/pdfMerger';
+import { useToastContext } from '../contexts/ToastContext';
 import {
   ClienteSection,
   VehiculoSection,
@@ -22,17 +23,32 @@ import { Button } from '../components/ui';
 import { PDFDocument } from '../components/PDFDocument';
 import type { Orden } from '../types';
 
+// Mapeo de estados
+const ESTADOS = {
+  1: { nombre: 'RECIBIDO', color: 'bg-blue-100 text-blue-800', darkColor: 'dark:bg-blue-900/20 dark:text-blue-300' },
+  2: { nombre: 'EN DIAGNÓSTICO', color: 'bg-yellow-100 text-yellow-800', darkColor: 'dark:bg-yellow-900/20 dark:text-yellow-300' },
+  3: { nombre: 'COTIZACIÓN LISTA', color: 'bg-purple-100 text-purple-800', darkColor: 'dark:bg-purple-900/20 dark:text-purple-300' },
+  4: { nombre: 'APROBADO', color: 'bg-green-100 text-green-800', darkColor: 'dark:bg-green-900/20 dark:text-green-300' },
+  5: { nombre: 'EN TRABAJO', color: 'bg-orange-100 text-orange-800', darkColor: 'dark:bg-orange-900/20 dark:text-orange-300' },
+  6: { nombre: 'ESPERANDO REFACCIONES', color: 'bg-amber-100 text-amber-800', darkColor: 'dark:bg-amber-900/20 dark:text-amber-300' },
+  7: { nombre: 'EN PRUEBAS', color: 'bg-indigo-100 text-indigo-800', darkColor: 'dark:bg-indigo-900/20 dark:text-indigo-300' },
+  8: { nombre: 'LISTO PARA ENTREGA', color: 'bg-cyan-100 text-cyan-800', darkColor: 'dark:bg-cyan-900/20 dark:text-cyan-300' },
+  9: { nombre: 'ENTREGADO', color: 'bg-gray-100 text-gray-800', darkColor: 'dark:bg-gray-900/20 dark:text-gray-300' },
+  10: { nombre: 'CANCELADO', color: 'bg-red-100 text-red-800', darkColor: 'dark:bg-red-900/20 dark:text-red-300' },
+};
+
 export const DetalleOrden = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { presupuesto, themeMode, toggleTheme, loadFromOrden, resetPresupuesto, markAsSaved } = usePresupuestoStore();
+  const { showSuccess, showError } = useToastContext();
   const [showLoader, setShowLoader] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [orden, setOrden] = useState<Orden | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
 
-  // Normalizar estado: mapear "pendiente" a "abierta" para compatibilidad
-  const estadoNormalizado = orden?.estado === 'pendiente' ? 'abierta' : orden?.estado;
+  const estadoActual = orden?.estado_id || 1;
+  const estadoInfo = ESTADOS[estadoActual as keyof typeof ESTADOS] || ESTADOS[1];
 
   // Aplicar el tema al documento
   useEffect(() => {
@@ -61,15 +77,14 @@ export const DetalleOrden = () => {
           setOrden(ordenData);
           loadFromOrden(ordenData);
         } else {
-          alert('Orden no encontrada');
+          showError('Error', 'Orden no encontrada');
           navigate('/dashboard');
         }
       } catch (error) {
         console.error('Error al cargar orden:', error);
-        alert('Error al cargar la orden');
+        showError('Error', 'Error al cargar la orden');
         navigate('/dashboard');
       } finally {
-        // Pequeño delay para asegurar que el loader sea visible
         setTimeout(() => {
           setIsLoading(false);
         }, 500);
@@ -77,7 +92,7 @@ export const DetalleOrden = () => {
     };
 
     cargarOrden();
-  }, [id, navigate, loadFromOrden]);
+  }, [id, navigate, loadFromOrden, showError]);
 
   const handleGeneratePDF = async () => {
     try {
@@ -98,9 +113,11 @@ export const DetalleOrden = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      
+      showSuccess('PDF Generado', 'El archivo se ha descargado correctamente');
     } catch (error) {
       console.error('Error al generar PDF:', error);
-      alert('Hubo un error al generar el PDF. Por favor intenta de nuevo.');
+      showError('Error', 'No se pudo generar el PDF');
     }
   };
 
@@ -116,7 +133,7 @@ export const DetalleOrden = () => {
         cliente: presupuesto.cliente,
         vehiculo: {
           ...presupuesto.vehiculo,
-          nivelCombustible: presupuesto.vehiculo.nivelGasolina, // Mapear para backend
+          nivelCombustible: presupuesto.vehiculo.nivelGasolina,
         },
         inspeccion: presupuesto.inspeccion,
         problemaReportado: presupuesto.problemaReportado,
@@ -134,10 +151,38 @@ export const DetalleOrden = () => {
       await ordenesAPI.update(id, ordenActualizada);
       console.log('✅ Orden actualizada exitosamente');
       markAsSaved();
+      showSuccess('Cambios guardados', 'La orden ha sido actualizada');
     } catch (error) {
       console.error('Error al guardar cambios:', error);
       setShowLoader(false);
-      alert('Hubo un error al guardar los cambios. Por favor intenta de nuevo.');
+      showError('Error', 'No se pudieron guardar los cambios');
+    }
+  };
+
+  const handleAdvanceState = async () => {
+    if (!id || !orden) return;
+
+    const nextStateId = estadoActual + 1;
+    if (nextStateId > 10) return; // No avanzar más allá del último estado
+
+    try {
+      setShowLoader(true);
+      console.log(`🔄 Avanzando estado de ${estadoActual} a ${nextStateId}`);
+      
+      await ordenesAPI.update(id, { estado_id: nextStateId });
+      
+      // Recargar la orden
+      const ordenActualizada = await ordenesAPI.getById(id);
+      if (ordenActualizada) {
+        setOrden(ordenActualizada);
+      }
+      
+      const nextStateInfo = ESTADOS[nextStateId as keyof typeof ESTADOS];
+      showSuccess('Estado actualizado', `La orden ahora está en: ${nextStateInfo.nombre}`);
+    } catch (error) {
+      console.error('Error al avanzar estado:', error);
+      setShowLoader(false);
+      showError('Error', 'No se pudo avanzar el estado');
     }
   };
 
@@ -147,26 +192,71 @@ export const DetalleOrden = () => {
     try {
       setShowLoader(true);
       console.log('🔒 Cerrando orden en API...');
-      await ordenesAPI.update(id, { estado: 'cerrada' });
+      await ordenesAPI.update(id, { estado: 'cerrada', estado_id: 9 }); // ENTREGADO
       console.log('✅ Orden cerrada exitosamente');
       setShowCloseModal(false);
-      // Después de cerrar, recargar la orden para actualizar el estado local
+      
       const ordenActualizada = await ordenesAPI.getById(id);
       if (ordenActualizada) {
         setOrden(ordenActualizada);
       }
+      showSuccess('Orden cerrada', 'La orden ha sido marcada como entregada');
     } catch (error) {
       console.error('Error al cerrar orden:', error);
       setShowLoader(false);
       setShowCloseModal(false);
-      alert('Hubo un error al cerrar la orden. Por favor intenta de nuevo.');
+      showError('Error', 'No se pudo cerrar la orden');
     }
   };
 
   const handleLoaderComplete = () => {
     setShowLoader(false);
-    resetPresupuesto();
-    navigate('/dashboard');
+  };
+
+  // Determinar qué secciones mostrar según el estado
+  const shouldShowSection = (section: string) => {
+    switch (section) {
+      case 'cliente':
+      case 'vehiculo':
+      case 'problema':
+      case 'inspeccionVisual':
+        return true; // Siempre visible
+      case 'diagnostico':
+      case 'puntosSeguridad':
+        return estadoActual >= 2; // Desde EN DIAGNÓSTICO
+      case 'servicios':
+      case 'refacciones':
+      case 'manoObra':
+      case 'resumen':
+        return estadoActual >= 3; // Desde COTIZACIÓN LISTA
+      case 'garantia':
+        return estadoActual >= 4; // Desde APROBADO
+      default:
+        return true;
+    }
+  };
+
+  // Determinar si una sección debe estar en modo readonly
+  const isSectionReadonly = (section: string) => {
+    // Las órdenes entregadas o canceladas son completamente readonly
+    if (estadoActual >= 9) return true;
+
+    switch (section) {
+      case 'cliente':
+      case 'vehiculo':
+      case 'problema':
+      case 'inspeccionVisual':
+        return estadoActual > 1; // Readonly después de RECIBIDO
+      case 'diagnostico':
+      case 'puntosSeguridad':
+        return estadoActual > 2; // Readonly después de EN DIAGNÓSTICO
+      case 'servicios':
+      case 'refacciones':
+      case 'manoObra':
+        return estadoActual > 3; // Readonly después de COTIZACIÓN LISTA
+      default:
+        return false;
+    }
   };
 
   // Mostrar loader mientras carga la orden
@@ -199,6 +289,9 @@ export const DetalleOrden = () => {
     );
   }
 
+  const canAdvanceState = estadoActual < 9 && estadoActual !== 10; // No se puede avanzar desde ENTREGADO o CANCELADO
+  const canEdit = estadoActual < 9 && estadoActual !== 10; // No se puede editar si está entregado o cancelado
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       {/* Header */}
@@ -221,11 +314,11 @@ export const DetalleOrden = () => {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {presupuesto.folio}
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Estado: <span className={estadoNormalizado === 'abierta' ? 'text-sag-600' : 'text-gray-600'}>
-                    {estadoNormalizado === 'abierta' ? 'Abierta' : 'Cerrada'}
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${estadoInfo.color} ${estadoInfo.darkColor}`}>
+                    {estadoInfo.nombre}
                   </span>
-                </p>
+                </div>
               </div>
             </div>
 
@@ -240,10 +333,23 @@ export const DetalleOrden = () => {
                 title={`Cambiar a modo ${themeMode === 'light' ? 'oscuro' : 'claro'}`}
               />
 
-              {/* Guardar Cambios - Solo si está abierta */}
-              {estadoNormalizado === 'abierta' && (
+              {/* Avanzar Estado */}
+              {canAdvanceState && (
                 <Button
                   variant="primary"
+                  onClick={handleAdvanceState}
+                  icon={<PlayCircle size={20} />}
+                  disabled={showLoader}
+                  className="hidden md:flex"
+                >
+                  Avanzar Estado
+                </Button>
+              )}
+
+              {/* Guardar Cambios */}
+              {canEdit && (
+                <Button
+                  variant="success"
                   onClick={handleSaveChanges}
                   icon={<Save size={20} />}
                   disabled={showLoader}
@@ -253,22 +359,22 @@ export const DetalleOrden = () => {
                 </Button>
               )}
 
-              {/* Cerrar Orden - Solo si está abierta */}
-              {estadoNormalizado === 'abierta' && (
+              {/* Marcar como Entregado */}
+              {estadoActual === 8 && (
                 <Button
-                  variant="danger"
+                  variant="primary"
                   onClick={() => setShowCloseModal(true)}
-                  icon={<X size={20} />}
+                  icon={<CheckCircle size={20} />}
                   disabled={showLoader}
                   className="hidden md:flex"
                 >
-                  Cerrar Orden
+                  Marcar Entregado
                 </Button>
               )}
 
               {/* Generar PDF */}
               <Button
-                variant="success"
+                variant="secondary"
                 onClick={handleGeneratePDF}
                 icon={<Download size={20} />}
                 className="hidden md:flex"
@@ -280,30 +386,41 @@ export const DetalleOrden = () => {
 
           {/* Botones móviles */}
           <div className="flex md:hidden gap-2 mt-3">
-            {estadoNormalizado === 'abierta' && (
-              <>
-                <Button
-                  variant="primary"
-                  onClick={handleSaveChanges}
-                  icon={<Save size={18} />}
-                  disabled={showLoader}
-                  className="flex-1 !text-sm"
-                >
-                  Guardar
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => setShowCloseModal(true)}
-                  icon={<X size={18} />}
-                  disabled={showLoader}
-                  className="flex-1 !text-sm"
-                >
-                  Cerrar
-                </Button>
-              </>
+            {canAdvanceState && (
+              <Button
+                variant="primary"
+                onClick={handleAdvanceState}
+                icon={<PlayCircle size={18} />}
+                disabled={showLoader}
+                className="flex-1 !text-sm"
+              >
+                Avanzar
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                variant="success"
+                onClick={handleSaveChanges}
+                icon={<Save size={18} />}
+                disabled={showLoader}
+                className="flex-1 !text-sm"
+              >
+                Guardar
+              </Button>
+            )}
+            {estadoActual === 8 && (
+              <Button
+                variant="primary"
+                onClick={() => setShowCloseModal(true)}
+                icon={<CheckCircle size={18} />}
+                disabled={showLoader}
+                className="flex-1 !text-sm"
+              >
+                Entregar
+              </Button>
             )}
             <Button
-              variant="success"
+              variant="secondary"
               onClick={handleGeneratePDF}
               icon={<Download size={18} />}
               className="flex-1 !text-sm"
@@ -317,39 +434,99 @@ export const DetalleOrden = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* Información del Vehículo */}
-          <VehiculoSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Información del Cliente - Siempre visible */}
+          <ClienteSection disabled={isSectionReadonly('cliente')} />
 
-          {/* Información del Cliente */}
-          <ClienteSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Información del Vehículo - Siempre visible */}
+          <VehiculoSection disabled={isSectionReadonly('vehiculo')} />
 
-          {/* Inspección Visual del Vehículo */}
-          <InspeccionSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Problema Reportado - Siempre visible */}
+          <ProblemaSection disabled={isSectionReadonly('problema')} />
 
-          {/* Puntos de Seguridad */}
-          <PuntosSeguridadSection 
-            puntosSeguridad={presupuesto.puntosSeguridad || []}
-            onChange={(puntos) => usePresupuestoStore.getState().updatePuntosSeguridad(puntos)}
-            disabled={estadoNormalizado === 'cerrada'}
-          />
+          {/* Inspección Visual del Vehículo - Siempre visible */}
+          <InspeccionSection disabled={isSectionReadonly('inspeccionVisual')} />
 
-          {/* Problema y Diagnóstico */}
-          <ProblemaSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Puntos de Seguridad - Desde EN DIAGNÓSTICO */}
+          {shouldShowSection('puntosSeguridad') && (
+            <PuntosSeguridadSection 
+              puntosSeguridad={presupuesto.puntosSeguridad || []}
+              onChange={(puntos) => usePresupuestoStore.getState().updatePuntosSeguridad(puntos)}
+              disabled={isSectionReadonly('puntosSeguridad')}
+            />
+          )}
 
-          {/* Servicios */}
-          <ServiciosSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Servicios - Desde COTIZACIÓN LISTA */}
+          {shouldShowSection('servicios') && (
+            <ServiciosSection disabled={isSectionReadonly('servicios')} />
+          )}
 
-          {/* Refacciones y Mano de Obra */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RefaccionesSection disabled={estadoNormalizado === 'cerrada'} />
-            <ManoObraSection disabled={estadoNormalizado === 'cerrada'} />
+          {/* Refacciones y Mano de Obra - Desde COTIZACIÓN LISTA */}
+          {(shouldShowSection('refacciones') || shouldShowSection('manoObra')) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {shouldShowSection('refacciones') && (
+                <RefaccionesSection disabled={isSectionReadonly('refacciones')} />
+              )}
+              {shouldShowSection('manoObra') && (
+                <ManoObraSection disabled={isSectionReadonly('manoObra')} />
+              )}
+            </div>
+          )}
+
+          {/* Resumen Financiero - Desde COTIZACIÓN LISTA */}
+          {shouldShowSection('resumen') && (
+            <ResumenSection />
+          )}
+
+          {/* Garantía - Desde APROBADO */}
+          {shouldShowSection('garantia') && (
+            <GarantiaSection />
+          )}
+
+          {/* Mensaje informativo según el estado */}
+          <div className={`border rounded-lg p-4 ${estadoInfo.color} ${estadoInfo.darkColor}`}>
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium">
+                  Estado actual: {estadoInfo.nombre}
+                </h3>
+                <div className="mt-2 text-sm">
+                  {estadoActual === 1 && (
+                    <p>Orden recibida. Haz clic en "Avanzar Estado" para comenzar el diagnóstico.</p>
+                  )}
+                  {estadoActual === 2 && (
+                    <p>Completa el diagnóstico técnico y los puntos de seguridad, luego avanza para generar la cotización.</p>
+                  )}
+                  {estadoActual === 3 && (
+                    <p>Cotización lista. Completa servicios y refacciones, luego avanza para esperar aprobación.</p>
+                  )}
+                  {estadoActual === 4 && (
+                    <p>Presupuesto aprobado. Avanza a "En Trabajo" para iniciar las reparaciones.</p>
+                  )}
+                  {estadoActual === 5 && (
+                    <p>Trabajo en progreso. Avanza cuando necesites refacciones o cuando termines.</p>
+                  )}
+                  {estadoActual === 6 && (
+                    <p>Esperando refacciones. Avanza cuando lleguen las piezas necesarias.</p>
+                  )}
+                  {estadoActual === 7 && (
+                    <p>Realizando pruebas finales. Avanza cuando esté listo para entrega.</p>
+                  )}
+                  {estadoActual === 8 && (
+                    <p>Vehículo listo para entrega. Haz clic en "Marcar Entregado" cuando el cliente recoja el vehículo.</p>
+                  )}
+                  {estadoActual === 9 && (
+                    <p>Vehículo entregado. Esta orden ha sido completada.</p>
+                  )}
+                  {estadoActual === 10 && (
+                    <p>Orden cancelada.</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-
-          {/* Resumen Financiero */}
-          <ResumenSection />
-
-          {/* Garantía */}
-          <GarantiaSection />
         </div>
       </main>
 
@@ -363,15 +540,15 @@ export const DetalleOrden = () => {
         </div>
       </footer>
 
-      {/* Modal de Confirmación para Cerrar Orden */}
+      {/* Modal de Confirmación para Marcar como Entregado */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              ¿Cerrar Orden?
+              ¿Marcar como Entregado?
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Una vez cerrada, no podrás hacer más cambios a esta orden. ¿Estás seguro de que deseas continuar?
+              ¿El vehículo ha sido entregado al cliente? Esta acción marcará la orden como completada.
             </p>
             <div className="flex gap-3">
               <Button
@@ -382,11 +559,11 @@ export const DetalleOrden = () => {
                 Cancelar
               </Button>
               <Button
-                variant="danger"
+                variant="primary"
                 onClick={handleCloseOrden}
                 className="flex-1"
               >
-                Sí, Cerrar Orden
+                Sí, Marcar como Entregado
               </Button>
             </div>
           </div>
