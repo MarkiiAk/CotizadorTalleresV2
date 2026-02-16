@@ -18,7 +18,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_find_by_id(?)');
             $stmt->execute([$id]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::findById: ' . $e->getMessage());
             return null;
@@ -32,7 +34,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_find_by_numero(?)');
             $stmt->execute([$numeroOrden]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::findByNumero: ' . $e->getMessage());
             return null;
@@ -56,7 +60,9 @@ class OrdenRepository {
                 $limit
             ]);
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::listPaginated: ' . $e->getMessage());
             return [];
@@ -79,6 +85,7 @@ class OrdenRepository {
             ]);
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             return $result['total_records'] ?? 0;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::countFiltered: ' . $e->getMessage());
@@ -118,11 +125,13 @@ class OrdenRepository {
                 $ordenData['anticipo'] ?? 0,
                 $ordenData['fecha_promesa'] ?? null
             ]);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             
             // Obtener ID de la orden creada
             $stmt = $this->db->prepare('SELECT @orden_id as orden_id');
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             
             return $result['orden_id'] ?? null;
             
@@ -141,7 +150,7 @@ class OrdenRepository {
                 CALL sp_orden_update(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             
-            return $stmt->execute([
+            $result = $stmt->execute([
                 $id,
                 $ordenData['numero_orden'],
                 $ordenData['cliente_id'],
@@ -162,6 +171,9 @@ class OrdenRepository {
                 $ordenData['anticipo'] ?? 0,
                 $ordenData['fecha_promesa'] ?? null
             ]);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            
+            return $result;
             
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::update: ' . $e->getMessage());
@@ -175,7 +187,9 @@ class OrdenRepository {
     public function changeStatus($id, $nuevoEstadoId, $usuarioId, $notas = '') {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_change_status(?, ?, ?, ?)');
-            return $stmt->execute([$id, $nuevoEstadoId, $usuarioId, $notas]);
+            $result = $stmt->execute([$id, $nuevoEstadoId, $usuarioId, $notas]);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::changeStatus: ' . $e->getMessage());
             throw $e;
@@ -203,7 +217,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_ordenes_search(?, ?)');
             $stmt->execute([$query, $limit]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::search: ' . $e->getMessage());
             return [];
@@ -217,7 +233,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_dashboard_stats(?, ?)');
             $stmt->execute([$fechaDesde, $fechaHasta]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::getDashboardStats: ' . $e->getMessage());
             return null;
@@ -231,7 +249,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_get_servicios(?)');
             $stmt->execute([$ordenId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::getServicios: ' . $e->getMessage());
             return [];
@@ -245,7 +265,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_get_refacciones(?)');
             $stmt->execute([$ordenId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::getRefacciones: ' . $e->getMessage());
             return [];
@@ -259,7 +281,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_get_inspeccion(?)');
             $stmt->execute([$ordenId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::getInspeccion: ' . $e->getMessage());
             return [];
@@ -273,7 +297,9 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_orden_get_timeline(?)');
             $stmt->execute([$ordenId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
+            return $result;
         } catch (Exception $e) {
             error_log('Error en OrdenRepository::getTimeline: ' . $e->getMessage());
             return [];
@@ -287,10 +313,12 @@ class OrdenRepository {
         try {
             $stmt = $this->db->prepare('CALL sp_generate_numero_orden(@numero_orden)');
             $stmt->execute();
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             
             $stmt = $this->db->prepare('SELECT @numero_orden as numero_orden');
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             
             return $result['numero_orden'] ?? 'OS-' . date('Y') . '-' . time();
             
@@ -429,6 +457,7 @@ class OrdenRepository {
             
             $danos = [];
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); // Cerrar cursor para evitar errores de resultsets pendientes
             
             foreach ($results as $row) {
                 $danos[] = [
