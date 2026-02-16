@@ -46,7 +46,6 @@ export const DetalleOrden = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [orden, setOrden] = useState<Orden | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [elementosInspeccion, setElementosInspeccion] = useState<any[]>([]);
 
   const estadoActual = orden?.estado_id || 1;
   const estadoInfo = ESTADOS[estadoActual as keyof typeof ESTADOS] || ESTADOS[1];
@@ -86,10 +85,6 @@ export const DetalleOrden = () => {
           setOrden(ordenData);
           loadFromOrden(ordenData);
           
-          // Guardar elementos de inspección en el estado
-          if (elementosData && Array.isArray(elementosData)) {
-            setElementosInspeccion(elementosData);
-          }
           
           // Solo quitar loader después de que todo esté completamente cargado
           setTimeout(() => {
