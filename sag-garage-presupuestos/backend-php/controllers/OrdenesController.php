@@ -189,6 +189,11 @@ class OrdenesController {
                 $this->insertPuntosSeguridad($orden_id, $data['puntosSeguridad']);
             }
             
+            // Insertar daños adicionales
+            if (isset($data['inspeccion']['danosAdicionales']) && !empty($data['inspeccion']['danosAdicionales'])) {
+                $this->insertDanosAdicionales($orden_id, $data['inspeccion']['danosAdicionales']);
+            }
+            
             // Retornar orden completa
             http_response_code(201);
             $this->getById($orden_id);
@@ -458,11 +463,26 @@ class OrdenesController {
         $inspeccionDB = $stmt->fetchAll();
         $stmt->closeCursor(); // Cerrar cursor antes de continuar
         
+        // Obtener daños adicionales
+        $stmt = $this->db->prepare('SELECT id, ubicacion, tipo_dano, descripcion FROM danos_adicionales WHERE orden_servicio_id = ? ORDER BY id');
+        $stmt->execute([$orden['id']]);
+        $danosAdicionales = $stmt->fetchAll();
+        
         $orden['inspeccion'] = [
             'exteriores' => [],
             'interiores' => [],
             'danosAdicionales' => []
         ];
+        
+        // Procesar daños adicionales
+        foreach ($danosAdicionales as $dano) {
+            $orden['inspeccion']['danosAdicionales'][] = [
+                'id' => (int)$dano['id'],
+                'ubicacion' => $dano['ubicacion'],
+                'tipo_dano' => $dano['tipo_dano'],
+                'descripcion' => $dano['descripcion'] ?? ''
+            ];
+        }
         
         foreach ($inspeccionDB as $elemento) {
             $categoria = strtolower($elemento['categoria'] ?? 'exterior');
@@ -699,6 +719,22 @@ class OrdenesController {
         }
     }
     
+    private function insertDanosAdicionales($orden_id, $danos) {
+        $stmt = $this->db->prepare('
+            INSERT INTO danos_adicionales (orden_servicio_id, ubicacion, tipo_dano, descripcion, created_at)
+            VALUES (?, ?, ?, ?, NOW())
+        ');
+        
+        foreach ($danos as $dano) {
+            $stmt->execute([
+                $orden_id,
+                $dano['ubicacion'] ?? '',
+                $dano['tipo_dano'] ?? '',
+                $dano['descripcion'] ?? ''
+            ]);
+        }
+    }
+    
     private function updateDatosRelacionados($orden_id, $data) {
         // Actualizar servicios
         if (isset($data['servicios']) || isset($data['manoDeObra'])) {
@@ -732,6 +768,30 @@ class OrdenesController {
             $this->db->prepare('DELETE FROM orden_puntos_seguridad WHERE orden_id = ?')->execute([$orden_id]);
             if (!empty($data['puntosSeguridad'])) {
                 $this->insertPuntosSeguridad($orden_id, $data['puntosSeguridad']);
+            }
+        }
+        
+        // Actualizar daños adicionales
+        if (isset($data['inspeccion']['danosAdicionales'])) {
+            $this->db->prepare('DELETE FROM danos_adicionales WHERE orden_servicio_id = ?')->execute([$orden_id]);
+            if (!empty($data['inspeccion']['danosAdicionales'])) {
+                $this->insertDanosAdicionales($orden_id, $data['inspeccion']['danosAdicionales']);
+            }
+        }
+    }
+        // Actualizar puntos de seguridad
+        if (isset($data['puntosSeguridad'])) {
+            $this->db->prepare('DELETE FROM orden_puntos_seguridad WHERE orden_id = ?')->execute([$orden_id]);
+            if (!empty($data['puntosSeguridad'])) {
+                $this->insertPuntosSeguridad($orden_id, $data['puntosSeguridad']);
+            }
+        }
+        
+        // Actualizar daños adicionales
+        if (isset($data['inspeccion']['danosAdicionales'])) {
+            $this->db->prepare('DELETE FROM danos_adicionales WHERE orden_servicio_id = ?')->execute([$orden_id]);
+            if (!empty($data['inspeccion']['danosAdicionales'])) {
+                $this->insertDanosAdicionales($orden_id, $data['inspeccion']['danosAdicionales']);
             }
         }
     }
