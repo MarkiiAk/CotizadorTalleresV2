@@ -116,9 +116,11 @@ class OrdenesController {
             // Generar número de orden
             $stmt = $this->db->prepare('CALL sp_generate_numero_orden(@numero_orden)');
             $stmt->execute();
+            $stmt->closeCursor(); // Cerrar cursor del SP
             $stmt = $this->db->prepare('SELECT @numero_orden as numero_orden');
             $stmt->execute();
             $numero_orden = $stmt->fetch()['numero_orden'];
+            $stmt->closeCursor(); // Cerrar cursor de la consulta SELECT
             
             // Calcular totales
             $resumen = $data['resumen'] ?? [];
@@ -159,11 +161,13 @@ class OrdenesController {
                 $anticipo,
                 $fechaPromesa
             ]);
+            $stmt->closeCursor(); // Cerrar cursor del SP
             
             // Obtener ID de la orden creada
             $stmt = $this->db->prepare('SELECT @orden_id as orden_id');
             $stmt->execute();
             $orden_id = $stmt->fetch()['orden_id'];
+            $stmt->closeCursor(); // Cerrar cursor de la consulta SELECT
             
             // Insertar servicios
             if (isset($data['servicios']) && !empty($data['servicios'])) {
@@ -219,6 +223,7 @@ class OrdenesController {
             $stmt = $this->db->prepare('CALL sp_orden_find_by_id(?)');
             $stmt->execute([$id]);
             $ordenExistente = $stmt->fetch();
+            $stmt->closeCursor(); // Cerrar cursor del SP
             
             if (!$ordenExistente) {
                 http_response_code(404);
@@ -264,6 +269,7 @@ class OrdenesController {
                 $anticipo,
                 $fechaPromesa
             ]);
+            $stmt->closeCursor(); // Cerrar cursor del SP
             
             // Actualizar datos relacionados
             $this->updateDatosRelacionados($id, $data);
@@ -299,6 +305,7 @@ class OrdenesController {
             
             $stmt = $this->db->prepare('CALL sp_orden_change_status(?, ?, ?, ?)');
             $stmt->execute([$id, $nuevoEstado, $userData['userId'], $notas]);
+            $stmt->closeCursor(); // Cerrar cursor del SP
             
             $this->getById($id);
             
