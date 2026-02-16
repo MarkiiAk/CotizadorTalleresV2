@@ -7,19 +7,41 @@ import { cacheService } from '../../services/cache';
 
 interface InspeccionSectionProps {
   disabled?: boolean;
+  elementosInspeccion?: any[];
 }
 
-export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false }) => {
+export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false, elementosInspeccion: elementosExterno = [] }) => {
   const { presupuesto } = usePresupuestoStore();
   const [elementosExteriores, setElementosExteriores] = React.useState<ElementoInspeccion[]>([]);
   const [elementosInteriores, setElementosInteriores] = React.useState<ElementoInspeccion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Cargar elementos de inspección desde la API
+  // Cargar elementos de inspección (usar prop si está disponible, sino desde API/cache)
   React.useEffect(() => {
     const cargarElementos = async () => {
       try {
         setIsLoading(true);
+        
+        // Si ya tenemos elementos desde el prop, úsalos directamente
+        if (elementosExterno && elementosExterno.length > 0) {
+          console.log('📦 Usando elementos de inspección del prop:', elementosExterno.length, 'elementos');
+          
+          // Procesar elementos del prop
+          const exteriores = elementosExterno
+            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
+            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+          
+          const interiores = elementosExterno
+            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
+            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+            
+          setElementosExteriores(exteriores);
+          setElementosInteriores(interiores);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Si no hay prop, cargar desde cache/API
         const response = await cacheService.getElementosInspeccion();
         
         // Manejar ambos formatos: array plano o estructura agrupada
@@ -48,7 +70,7 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
           throw new Error('Formato de respuesta inválido');
         }
 
-        console.log('✅ Elementos cargados:', { exteriores: exteriores.length, interiores: interiores.length });
+        console.log('✅ Elementos cargados desde cache/API:', { exteriores: exteriores.length, interiores: interiores.length });
         setElementosExteriores(exteriores);
         setElementosInteriores(interiores);
       } catch (error) {
@@ -62,7 +84,7 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
     };
 
     cargarElementos();
-  }, []);
+  }, [elementosExterno]);
   
   // Crear estructura dinámica de inspección basada en elementos de BD
   const inspeccion = React.useMemo(() => {

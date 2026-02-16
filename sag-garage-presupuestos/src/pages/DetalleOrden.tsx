@@ -46,6 +46,7 @@ export const DetalleOrden = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [orden, setOrden] = useState<Orden | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [elementosInspeccion, setElementosInspeccion] = useState<any[]>([]);
 
   const estadoActual = orden?.estado_id || 1;
   const estadoInfo = ESTADOS[estadoActual as keyof typeof ESTADOS] || ESTADOS[1];
@@ -85,8 +86,10 @@ export const DetalleOrden = () => {
           setOrden(ordenData);
           loadFromOrden(ordenData);
           
-          // Cachear elementos de inspección para futuras cargas
+          // Guardar elementos de inspección en el estado
           if (elementosData && Array.isArray(elementosData)) {
+            setElementosInspeccion(elementosData);
+            // Cachear elementos de inspección para futuras cargas
             localStorage.setItem('elementos-inspeccion-cache', JSON.stringify({
               data: elementosData,
               timestamp: Date.now()
@@ -461,7 +464,10 @@ export const DetalleOrden = () => {
           <ProblemaSection disabled={isSectionReadonly('problema')} />
 
           {/* Inspección Visual del Vehículo - Siempre visible */}
-          <InspeccionSection disabled={isSectionReadonly('inspeccionVisual')} />
+          <InspeccionSection 
+            disabled={isSectionReadonly('inspeccionVisual')} 
+            elementosInspeccion={elementosInspeccion}
+          />
 
           {/* Puntos de Seguridad - Desde EN DIAGNÓSTICO */}
           {shouldShowSection('puntosSeguridad') && (
