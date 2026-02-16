@@ -226,6 +226,28 @@ CREATE TABLE `elementos_inspeccion` (
 COMMENT='Catálogo de elementos para inspección de vehículos';
 
 -- ============================================================================
+-- TABLA: ESTADOS_SEGURIDAD (SECURITY STATUS CATALOG)
+-- ============================================================================
+
+CREATE TABLE `estados_seguridad` (
+  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(50) NOT NULL,
+  `descripcion` TEXT NULL,
+  `color` VARCHAR(7) NOT NULL DEFAULT '#6c757d',
+  `icon` VARCHAR(50) NOT NULL DEFAULT 'circle',
+  `orden_visualizacion` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `activo` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_estados_seguridad_nombre` (`nombre`),
+  KEY `idx_estados_seguridad_orden` (`orden_visualizacion`, `activo`),
+  KEY `idx_estados_seguridad_activo` (`activo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
+COMMENT='Estados de seguridad para puntos de inspección';
+
+-- ============================================================================
 -- TABLA: INSPECCION_VEHICULO (NO MORE CHECKBOXES!)
 -- ============================================================================
 
@@ -742,6 +764,15 @@ INSERT INTO `elementos_inspeccion` (`nombre`, `categoria`, `obligatorio`, `orden
 ('Encendedor', 'Interiores', 0, 27),
 ('Documentos', 'Documentación', 0, 28);
 
+-- Estados de seguridad básicos
+INSERT INTO `estados_seguridad` (`id`, `nombre`, `descripcion`, `color`, `icon`, `orden_visualizacion`) VALUES
+(1, 'Excelente', 'Componente en perfecto estado', '#28a745', 'check-circle', 1),
+(2, 'Bueno', 'Componente en buen estado', '#17a2b8', 'check', 2),
+(3, 'Regular', 'Componente necesita atención', '#ffc107', 'exclamation-triangle', 3),
+(4, 'Malo', 'Componente necesita reparación urgente', '#fd7e14', 'exclamation', 4),
+(5, 'Crítico', 'Componente debe ser reemplazado inmediatamente', '#dc3545', 'times-circle', 5),
+(6, 'No Aplica', 'No aplica para este vehículo', '#6c757d', 'minus', 6);
+
 -- Servicios básicos del catálogo
 INSERT INTO `servicios_catalogo` (`nombre`, `categoria`, `descripcion`, `precio_base`, `tiempo_estimado_horas`) VALUES
 ('Cambio de Aceite y Filtro', 'Mantenimiento', 'Cambio de aceite de motor y filtro de aceite', 350.00, 0.50),
@@ -819,6 +850,115 @@ BEGIN
         INSERT INTO `orden_timeline` (`orden_id`, `estado_anterior_id`, `estado_nuevo_id`, `usuario_id`)
         VALUES (NEW.id, OLD.estado_id, NEW.estado_id, NEW.usuario_id);
     END IF;
+END$$
+
+DELIMITER ;
+
+-- ============================================================================
+-- STORED PROCEDURES PARA ESTADOS_SEGURIDAD
+-- ============================================================================
+
+DELIMITER $$
+
+-- Obtener todos los estados de seguridad
+DROP PROCEDURE IF EXISTS GetEstadosSeguridad$$
+CREATE PROCEDURE GetEstadosSeguridad()
+BEGIN
+    SELECT 
+        id,
+        nombre,
+        descripcion,
+        color,
+        icon,
+        orden_visualizacion,
+        activo,
+        created_at,
+        updated_at
+    FROM estados_seguridad 
+    WHERE activo = 1
+    ORDER BY orden_visualizacion ASC, nombre ASC;
+END$$
+
+-- Obtener estado de seguridad por ID
+DROP PROCEDURE IF EXISTS GetEstadoSeguridadById$$
+CREATE PROCEDURE GetEstadoSeguridadById(IN estado_id INT)
+BEGIN
+    SELECT 
+        id,
+        nombre,
+        descripcion,
+        color,
+        icon,
+        orden_visualizacion,
+        activo,
+        created_at,
+        updated_at
+    FROM estados_seguridad 
+    WHERE id = estado_id AND activo = 1;
+END$$
+
+-- Crear estado de seguridad
+DROP PROCEDURE IF EXISTS CreateEstadoSeguridad$$
+CREATE PROCEDURE CreateEstadoSeguridad(
+    IN p_nombre VARCHAR(50),
+    IN p_descripcion TEXT,
+    IN p_color VARCHAR(7),
+    IN p_icon VARCHAR(50),
+    IN p_orden_visualizacion TINYINT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    INSERT INTO estados_seguridad (nombre, descripcion, color, icon, orden_visualizacion, activo)
+    VALUES (p_nombre, p_descripcion, p_color, p_icon, p_orden_visualizacion, 1);
+    
+    SELECT LAST_INSERT_ID() as id, 'Estado de seguridad creado exitosamente' as message;
+    
+    COMMIT;
+END$$
+
+-- Actualizar estado de seguridad
+DROP PROCEDURE IF EXISTS UpdateEstadoSeguridad$$
+CREATE PROCEDURE UpdateEstadoSeguridad(
+    IN p_id INT,
+    IN p_nombre VARCHAR(50),
+    IN p_descripcion TEXT,
+    IN p_color VARCHAR(7),
+    IN p_icon VARCHAR(50),
+    IN p_orden_visualizacion TINYINT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    UPDATE estados_seguridad 
+    SET 
+        nombre = p_nombre,
+        descripcion = p_descripcion,
+        color = p_color,
+        icon = p_icon,
+        orden_visualizacion = p_orden_visualizacion,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_id AND activo = 1;
+    
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Estado de seguridad no encontrado';
+    END IF;
+    
+    SELECT p_id as id, 'Estado de seguridad actualizado exitosamente' as message;
+    
+    COMMIT;
 END$$
 
 DELIMITER ;

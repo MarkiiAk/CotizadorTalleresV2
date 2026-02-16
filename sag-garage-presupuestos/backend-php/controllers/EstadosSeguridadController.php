@@ -13,12 +13,7 @@ class EstadosSeguridadController {
      */
     public function getEstados() {
         try {
-            $query = "SELECT id, nombre, color, descripcion, orden_visualizacion, activo 
-                      FROM estados_seguridad 
-                      WHERE activo = 1 
-                      ORDER BY orden_visualizacion ASC";
-            
-            $stmt = $this->db->prepare($query);
+            $stmt = $this->db->prepare("CALL GetEstadosSeguridad()");
             $stmt->execute();
             $estados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -31,8 +26,7 @@ class EstadosSeguridadController {
                     'descripcion' => $estado['descripcion'],
                     'orden' => (int)$estado['orden_visualizacion'],
                     'activo' => (bool)$estado['activo'],
-                    // Agregar icono basado en el nombre
-                    'icono' => $this->getIconoForEstado($estado['nombre'])
+                    'icon' => $estado['icon'] ?? $this->getIconoForEstado($estado['nombre'])
                 ];
             }, $estados);
 
@@ -69,13 +63,8 @@ class EstadosSeguridadController {
      */
     public function getEstadoById($id) {
         try {
-            $query = "SELECT id, nombre, color, descripcion, orden_visualizacion, activo 
-                      FROM estados_seguridad 
-                      WHERE id = :id";
-            
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            $stmt->execute();
+            $stmt = $this->db->prepare("CALL GetEstadoSeguridadById(?)");
+            $stmt->execute([$id]);
             $estado = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$estado) {
@@ -93,7 +82,7 @@ class EstadosSeguridadController {
                 'descripcion' => $estado['descripcion'],
                 'orden' => (int)$estado['orden_visualizacion'],
                 'activo' => (bool)$estado['activo'],
-                'icono' => $this->getIconoForEstado($estado['nombre'])
+                'icon' => $estado['icon'] ?? $this->getIconoForEstado($estado['nombre'])
             ];
 
             http_response_code(200);
