@@ -129,7 +129,7 @@ class OrdenesController {
             
             // Crear orden usando stored procedure - Estado inicial: 1 (Recibido)
             $stmt = $this->db->prepare('
-                CALL sp_orden_create(?, ?, ?, ?, ?, ?, 1, "media", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @orden_id)
+                CALL sp_orden_create(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @orden_id)
             ');
             
             $vehiculoData = $data['vehiculo'] ?? [];
@@ -144,6 +144,8 @@ class OrdenesController {
                 $userData['userId'],
                 $data['problemaReportado'] ?? '',
                 $data['diagnosticoTecnico'] ?? '',
+                1, // estado_id inicial (Recibido)
+                'media', // prioridad por defecto
                 $vehiculoData['kilometrajeEntrada'] ?? '',
                 $vehiculoData['kilometrajeSalida'] ?? '',
                 $vehiculoData['nivelCombustible'] ?? 0,
