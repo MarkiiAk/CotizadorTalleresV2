@@ -299,6 +299,7 @@ CREATE TABLE `inspeccion_vehiculo` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Inspección de vehículos - sistema flexible sin checkboxes hardcoded';
 
+
 -- ============================================================================
 -- TABLA: SERVICIOS_CATALOGO
 -- ============================================================================

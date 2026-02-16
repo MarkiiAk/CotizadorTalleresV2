@@ -20,22 +20,40 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
     const cargarElementos = async () => {
       try {
         setIsLoading(true);
-        const elementos = await elementosInspeccionAPI.getElementos();
+        const response = await elementosInspeccionAPI.getElementos();
         
-        // Separar por categoría
-        const exteriores = elementos
-          .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
-          .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        // Manejar ambos formatos: array plano o estructura agrupada
+        let exteriores: ElementoInspeccion[] = [];
+        let interiores: ElementoInspeccion[] = [];
         
-        const interiores = elementos
-          .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
-          .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        if (Array.isArray(response)) {
+          // Formato array plano
+          exteriores = response
+            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
+            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+          
+          interiores = response
+            .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
+            .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        } else if (response && typeof response === 'object' && ('exteriores' in response || 'interiores' in response)) {
+          // Formato estructura agrupada
+          exteriores = (response as any).exteriores || [];
+          interiores = (response as any).interiores || [];
+          
+          // Ordenar cada grupo
+          exteriores.sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+          interiores.sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        } else {
+          console.warn('⚠️ Formato de respuesta no reconocido:', response);
+          throw new Error('Formato de respuesta inválido');
+        }
 
+        console.log('✅ Elementos cargados:', { exteriores: exteriores.length, interiores: interiores.length });
         setElementosExteriores(exteriores);
         setElementosInteriores(interiores);
       } catch (error) {
         console.error('❌ Error cargando elementos de inspección:', error);
-        // Fallback a elementos hardcodeados si hay error
+        // Fallback a elementos vacíos si hay error
         setElementosExteriores([]);
         setElementosInteriores([]);
       } finally {
@@ -54,16 +72,16 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
       danosAdicionales: presupuesto.inspeccion?.danosAdicionales || [],
     };
 
-    // Inicializar exteriores dinámicamente
+    // Inicializar exteriores dinámicamente - todos checkeados por defecto
     elementosExteriores.forEach(elemento => {
       const fieldKey = elemento.key.replace('ext_', '');
-      baseInspeccion.exteriores[fieldKey] = (presupuesto.inspeccion?.exteriores as any)?.[fieldKey] || false;
+      baseInspeccion.exteriores[fieldKey] = (presupuesto.inspeccion?.exteriores as any)?.[fieldKey] ?? true;
     });
 
-    // Inicializar interiores dinámicamente
+    // Inicializar interiores dinámicamente - todos checkeados por defecto
     elementosInteriores.forEach(elemento => {
       const fieldKey = elemento.key.replace('int_', '');
-      baseInspeccion.interiores[fieldKey] = (presupuesto.inspeccion?.interiores as any)?.[fieldKey] || false;
+      baseInspeccion.interiores[fieldKey] = (presupuesto.inspeccion?.interiores as any)?.[fieldKey] ?? true;
     });
 
     return baseInspeccion;

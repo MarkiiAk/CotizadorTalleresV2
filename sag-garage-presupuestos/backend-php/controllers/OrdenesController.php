@@ -349,21 +349,22 @@ class OrdenesController {
             $stmt->execute();
             $elementos = $stmt->fetchAll();
             
-            // Agrupar por categoría y mapear a estructura frontend
-            $result = [
-                'exteriores' => [],
-                'interiores' => []
-            ];
+            // Mapear elementos a formato esperado por el frontend
+            $result = [];
             
             foreach ($elementos as $elemento) {
-                $categoria = strtolower($elemento['categoria']) === 'interior' ? 'interiores' : 'exteriores';
+                $categoria = strtolower($elemento['categoria']);
                 $frontendKey = $this->mapearElementoKey($elemento['nombre']);
                 
-                $result[$categoria][] = [
+                // Agregar prefijo según categoría para consistencia con frontend
+                $keyWithPrefix = $categoria === 'interior' ? 'int_' . $frontendKey : 'ext_' . $frontendKey;
+                
+                $result[] = [
                     'id' => (int)$elemento['id'],
                     'nombre' => $elemento['nombre'],
-                    'key' => $frontendKey,
-                    'orden' => (int)$elemento['orden_visual']
+                    'key' => $keyWithPrefix,
+                    'orden' => (int)$elemento['orden_visual'],
+                    'categoria' => $categoria
                 ];
             }
             

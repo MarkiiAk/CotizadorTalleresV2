@@ -505,6 +505,7 @@ BEGIN
     ORDER BY ot.created_at DESC;
 END$$
 
+
 DELIMITER ;
 
 -- =====================================================
