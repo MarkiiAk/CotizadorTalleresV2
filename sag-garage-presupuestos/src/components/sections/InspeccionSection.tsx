@@ -10,7 +10,7 @@ interface InspeccionSectionProps {
 }
 
 export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false }) => {
-  const { presupuesto, markAsChanged } = usePresupuestoStore();
+  const { presupuesto } = usePresupuestoStore();
   const [elementosExteriores, setElementosExteriores] = React.useState<ElementoInspeccion[]>([]);
   const [elementosInteriores, setElementosInteriores] = React.useState<ElementoInspeccion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
