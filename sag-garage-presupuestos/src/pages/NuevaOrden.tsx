@@ -164,10 +164,9 @@ export const NuevaOrden = () => {
         `La orden ${result.folio} ha sido creada en estado RECIBIDO`
       );
       
-      // Redireccionar al detalle de la orden para continuar el flujo
-      setTimeout(() => {
-        navigate(`/orden/${result.id}`);
-      }, 2000);
+      // Navegar inmediatamente después del POST exitoso
+      // No esperamos el loader completo para evitar la pausa visual
+      navigate(`/orden/${result.id}`);
       
     } catch (error) {
       console.error('Error al guardar la orden:', error);
@@ -178,8 +177,7 @@ export const NuevaOrden = () => {
 
   const handleLoaderComplete = () => {
     setShowLoader(false);
-    resetPresupuesto();
-    // No navegamos aquí, se hace en el success
+    // No reseteamos ni navegamos aquí ya que se hace directamente en handleSaveOrden
   };
 
   return (
