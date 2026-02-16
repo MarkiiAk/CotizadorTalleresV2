@@ -310,10 +310,10 @@ class OrdenesController {
             requireAuth();
             
             $stmt = $this->db->prepare('
-                SELECT id, nombre, color, descripcion, orden_visual, activo 
+                SELECT id, nombre, color, descripcion, workflow_order, activo 
                 FROM estados_orden 
                 WHERE activo = 1 
-                ORDER BY orden_visual
+                ORDER BY workflow_order
             ');
             $stmt->execute();
             $estados = $stmt->fetchAll();

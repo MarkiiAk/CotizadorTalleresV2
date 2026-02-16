@@ -1,18 +1,18 @@
 -- ============================================================================
--- SAG GARAGE V2.0 - ENTERPRISE DATABASE SCHEMA
--- "BASE DE DATOS DE LOS DIOSES" 
+-- SAG GARAGE V2.0 - ENTERPRISE DATABASE SCHEMA (IDEMPOTENT VERSION)
+-- "BASE DE DATOS DE LOS DIOSES - EDICIÓN IDEMPOTENTE" 
 -- ============================================================================
 -- Fecha: Febrero 2026
--- Versión: 2.0.0
+-- Versión: 2.0.0 IDEMPOTENT
 -- Autor: SAG Garage Development Team
--- Descripción: Schema optimizado con mejores prácticas DBA
+-- Descripción: Schema 100% re-ejecutable - USUARIOS protegida, todo lo demás se recrea
 -- ============================================================================
 
 -- ============================================================================
--- SCRIPT DE LIMPIEZA (EJECUTAR PRIMERO SI ES RE-INSTALACIÓN)
+-- CONFIGURACIÓN INICIAL
 -- ============================================================================
 
--- Desactivar verificaciones para limpieza rápida
+-- Desactivar verificaciones para instalación rápida
 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
@@ -21,10 +21,31 @@ SET @OLD_TIME_ZONE=@@TIME_ZONE, TIME_ZONE='+00:00';
 -- Base de datos creada desde cPanel: saggarag_CotizadorTalleres
 USE `saggarag_CotizadorTalleres`;
 
--- LIMPIEZA: Eliminar todas las tablas si existen (en orden correcto para evitar FK errors)
+-- ============================================================================
+-- LIMPIEZA SELECTIVA (TODO EXCEPTO USUARIOS)
+-- ============================================================================
+
+-- Eliminar vistas primero
 DROP VIEW IF EXISTS `v_dashboard_stats`;
 DROP VIEW IF EXISTS `v_ordenes_completas`;
 
+-- Eliminar triggers
+DROP TRIGGER IF EXISTS `tr_ordenes_audit_insert`;
+DROP TRIGGER IF EXISTS `tr_ordenes_audit_update`;
+DROP TRIGGER IF EXISTS `tr_ordenes_timeline`;
+
+-- Eliminar stored procedures
+DROP PROCEDURE IF EXISTS `GetEstadosSeguridad`;
+DROP PROCEDURE IF EXISTS `GetEstadoSeguridadById`;
+DROP PROCEDURE IF EXISTS `CreateEstadoSeguridad`;
+DROP PROCEDURE IF EXISTS `UpdateEstadoSeguridad`;
+DROP PROCEDURE IF EXISTS `GetPuntosSeguridadCatalogo`;
+DROP PROCEDURE IF EXISTS `GetPuntoSeguridadById`;
+DROP PROCEDURE IF EXISTS `CreatePuntoSeguridad`;
+DROP PROCEDURE IF EXISTS `UpdatePuntoSeguridad`;
+DROP PROCEDURE IF EXISTS `GetPuntosSeguridadByOrden`;
+
+-- ELIMINAR TODAS LAS TABLAS EXCEPTO USUARIOS (en orden correcto para evitar FK errors)
 DROP TABLE IF EXISTS `referidos`;
 DROP TABLE IF EXISTS `programa_lealtad`;
 DROP TABLE IF EXISTS `solicitudes_resena`;
@@ -36,6 +57,8 @@ DROP TABLE IF EXISTS `tracking_tokens`;
 DROP TABLE IF EXISTS `orden_timeline`;
 DROP TABLE IF EXISTS `notificaciones_automaticas`;
 DROP TABLE IF EXISTS `plantillas_notificacion`;
+DROP TABLE IF EXISTS `orden_puntos_seguridad`;
+DROP TABLE IF EXISTS `puntos_seguridad_catalogo`;
 DROP TABLE IF EXISTS `refacciones_orden`;
 DROP TABLE IF EXISTS `servicios_orden`;
 DROP TABLE IF EXISTS `servicios_catalogo`;
@@ -48,17 +71,15 @@ DROP TABLE IF EXISTS `clientes`;
 DROP TABLE IF EXISTS `audit_log`;
 DROP TABLE IF EXISTS `tipos_negocio`;
 DROP TABLE IF EXISTS `configuracion_sistema`;
-DROP TABLE IF EXISTS `usuarios`;
+DROP TABLE IF EXISTS `estados_seguridad`;
+
+-- ⚠️  NOTA IMPORTANTE: USUARIOS NUNCA SE DROPEA - ES SAGRADA ⚠️
 
 -- ============================================================================
--- INICIO DE INSTALACIÓN LIMPIA
+-- TABLA: USUARIOS (PROTEGIDA - SOLO SE CREA SI NO EXISTE)
 -- ============================================================================
 
--- ============================================================================
--- TABLA: USUARIOS (CLEAN & OPTIMIZED)
--- ============================================================================
-
-CREATE TABLE `usuarios` (
+CREATE TABLE IF NOT EXISTS `usuarios` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(50) NOT NULL,
   `email` VARCHAR(320) NOT NULL COMMENT 'RFC 5322 compliant',
@@ -77,10 +98,14 @@ CREATE TABLE `usuarios` (
   KEY `idx_usuarios_rol_activo` (`rol`, `activo`),
   KEY `idx_usuarios_ultimo_login` (`ultimo_login`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
-COMMENT='Usuarios del sistema con roles y permisos';
+COMMENT='Usuarios del sistema con roles y permisos - TABLA PROTEGIDA';
 
 -- ============================================================================
--- TABLA: CLIENTES (ULTRA CLEAN)
+-- TODAS LAS DEMÁS TABLAS SE RECREAN COMPLETAMENTE
+-- ============================================================================
+
+-- ============================================================================
+-- TABLA: CLIENTES
 -- ============================================================================
 
 CREATE TABLE `clientes` (
@@ -101,7 +126,7 @@ CREATE TABLE `clientes` (
 COMMENT='Clientes del sistema - información básica';
 
 -- ============================================================================
--- TABLA: VEHICULOS (OPTIMIZED)
+-- TABLA: VEHICULOS
 -- ============================================================================
 
 CREATE TABLE `vehiculos` (
@@ -131,7 +156,7 @@ CREATE TABLE `vehiculos` (
 COMMENT='Vehículos asociados a clientes';
 
 -- ============================================================================
--- TABLA: ESTADOS_ORDEN (WORKFLOW GRANULAR)
+-- TABLA: ESTADOS_ORDEN
 -- ============================================================================
 
 CREATE TABLE `estados_orden` (
@@ -153,7 +178,7 @@ CREATE TABLE `estados_orden` (
 COMMENT='Estados de workflow para órdenes de servicio';
 
 -- ============================================================================
--- TABLA: ORDENES_SERVICIO (CORE BUSINESS)
+-- TABLA: ORDENES_SERVICIO
 -- ============================================================================
 
 CREATE TABLE `ordenes_servicio` (
@@ -208,7 +233,7 @@ CREATE TABLE `ordenes_servicio` (
 COMMENT='Órdenes de servicio - core business table';
 
 -- ============================================================================
--- TABLA: ELEMENTOS_INSPECCION (FLEXIBLE INSPECTIONS)
+-- TABLA: ELEMENTOS_INSPECCION
 -- ============================================================================
 
 CREATE TABLE `elementos_inspeccion` (
@@ -227,7 +252,7 @@ CREATE TABLE `elementos_inspeccion` (
 COMMENT='Catálogo de elementos para inspección de vehículos';
 
 -- ============================================================================
--- TABLA: ESTADOS_SEGURIDAD (SECURITY STATUS CATALOG)
+-- TABLA: ESTADOS_SEGURIDAD
 -- ============================================================================
 
 CREATE TABLE `estados_seguridad` (
@@ -249,7 +274,7 @@ CREATE TABLE `estados_seguridad` (
 COMMENT='Estados de seguridad para puntos de inspección';
 
 -- ============================================================================
--- TABLA: INSPECCION_VEHICULO (NO MORE CHECKBOXES!)
+-- TABLA: INSPECCION_VEHICULO
 -- ============================================================================
 
 CREATE TABLE `inspeccion_vehiculo` (
@@ -275,7 +300,7 @@ CREATE TABLE `inspeccion_vehiculo` (
 COMMENT='Inspección de vehículos - sistema flexible sin checkboxes hardcoded';
 
 -- ============================================================================
--- TABLA: SERVICIOS_CATALOGO (PREDEFINED SERVICES)
+-- TABLA: SERVICIOS_CATALOGO
 -- ============================================================================
 
 CREATE TABLE `servicios_catalogo` (
@@ -297,7 +322,7 @@ CREATE TABLE `servicios_catalogo` (
 COMMENT='Catálogo de servicios predefinidos';
 
 -- ============================================================================
--- TABLA: SERVICIOS_ORDEN (SERVICES PER ORDER)
+-- TABLA: SERVICIOS_ORDEN
 -- ============================================================================
 
 CREATE TABLE `servicios_orden` (
@@ -325,7 +350,7 @@ CREATE TABLE `servicios_orden` (
 COMMENT='Servicios aplicados a cada orden';
 
 -- ============================================================================
--- TABLA: REFACCIONES_ORDEN (PARTS PER ORDER)
+-- TABLA: REFACCIONES_ORDEN
 -- ============================================================================
 
 CREATE TABLE `refacciones_orden` (
@@ -352,10 +377,62 @@ CREATE TABLE `refacciones_orden` (
 COMMENT='Refacciones utilizadas en cada orden';
 
 -- ============================================================================
+-- TABLA: PUNTOS_SEGURIDAD_CATALOGO
+-- ============================================================================
+
+CREATE TABLE `puntos_seguridad_catalogo` (
+  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(100) NOT NULL,
+  `categoria` VARCHAR(50) NOT NULL,
+  `descripcion` TEXT NULL,
+  `orden_visualizacion` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `es_critico` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+  `activo` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (`id`),
+  KEY `idx_puntos_categoria` (`categoria`, `orden_visualizacion`),
+  KEY `idx_puntos_critico` (`es_critico`),
+  KEY `idx_puntos_activo` (`activo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
+COMMENT='Catálogo de puntos de seguridad para inspección vehicular';
+
+-- ============================================================================
+-- TABLA: ORDEN_PUNTOS_SEGURIDAD
+-- ============================================================================
+
+CREATE TABLE `orden_puntos_seguridad` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `orden_id` INT UNSIGNED NOT NULL,
+  `punto_seguridad_id` SMALLINT UNSIGNED NOT NULL,
+  `estado_id` SMALLINT UNSIGNED NOT NULL,
+  `notas` TEXT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_orden_punto` (`orden_id`, `punto_seguridad_id`),
+  KEY `idx_orden_puntos_orden` (`orden_id`),
+  KEY `idx_orden_puntos_punto` (`punto_seguridad_id`),
+  KEY `idx_orden_puntos_estado` (`estado_id`),
+  
+  CONSTRAINT `fk_orden_puntos_orden` 
+    FOREIGN KEY (`orden_id`) REFERENCES `ordenes_servicio` (`id`) 
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_orden_puntos_punto` 
+    FOREIGN KEY (`punto_seguridad_id`) REFERENCES `puntos_seguridad_catalogo` (`id`) 
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_orden_puntos_estado` 
+    FOREIGN KEY (`estado_id`) REFERENCES `estados_seguridad` (`id`) 
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
+COMMENT='Puntos de seguridad evaluados por orden de servicio';
+
+-- ============================================================================
 -- TABLAS DE AUTOMATIZACIÓN Y NOTIFICACIONES
 -- ============================================================================
 
--- PLANTILLAS DE NOTIFICACIÓN
 CREATE TABLE `plantillas_notificacion` (
   `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `nombre` VARCHAR(100) NOT NULL,
@@ -374,7 +451,6 @@ CREATE TABLE `plantillas_notificacion` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Plantillas para notificaciones automáticas';
 
--- NOTIFICACIONES AUTOMÁTICAS
 CREATE TABLE `notificaciones_automaticas` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `orden_id` INT UNSIGNED NOT NULL,
@@ -408,7 +484,6 @@ COMMENT='Cola de notificaciones automáticas';
 -- TABLAS DE CUSTOMER JOURNEY Y PORTAL
 -- ============================================================================
 
--- TIMELINE DE ÓRDENES
 CREATE TABLE `orden_timeline` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `orden_id` INT UNSIGNED NOT NULL,
@@ -440,7 +515,6 @@ CREATE TABLE `orden_timeline` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Timeline de cambios de estado por orden';
 
--- TOKENS DE SEGUIMIENTO
 CREATE TABLE `tracking_tokens` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `orden_id` INT UNSIGNED NOT NULL,
@@ -460,7 +534,6 @@ CREATE TABLE `tracking_tokens` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Tokens para tracking público de órdenes';
 
--- FOTOS DEL PROCESO
 CREATE TABLE `fotos_proceso` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `orden_id` INT UNSIGNED NOT NULL,
@@ -488,7 +561,6 @@ COMMENT='Fotos del proceso para portal del cliente';
 -- TABLAS DE INTELIGENCIA PREDICTIVA
 -- ============================================================================
 
--- FALLAS COMUNES
 CREATE TABLE `fallas_comunes` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `marca` VARCHAR(50) NOT NULL,
@@ -513,7 +585,6 @@ CREATE TABLE `fallas_comunes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Base de conocimiento de fallas comunes por vehículo';
 
--- HISTORIAL DE SERVICIOS PARA PREDICCIONES
 CREATE TABLE `historial_servicios` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `vehiculo_id` INT UNSIGNED NOT NULL,
@@ -541,7 +612,6 @@ CREATE TABLE `historial_servicios` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Historial de servicios para predicciones de mantenimiento';
 
--- PRICING INTELIGENTE
 CREATE TABLE `precios_historicos` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `servicio_nombre` VARCHAR(200) NOT NULL,
@@ -566,7 +636,6 @@ COMMENT='Precios históricos para sugerencias inteligentes';
 -- TABLAS DE SISTEMA DE REPUTACIÓN
 -- ============================================================================
 
--- SOLICITUDES DE RESEÑA
 CREATE TABLE `solicitudes_resena` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `orden_id` INT UNSIGNED NOT NULL,
@@ -595,7 +664,6 @@ CREATE TABLE `solicitudes_resena` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Sistema de solicitudes de reseñas automáticas';
 
--- PROGRAMA DE LEALTAD
 CREATE TABLE `programa_lealtad` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `cliente_id` INT UNSIGNED NOT NULL,
@@ -619,7 +687,6 @@ CREATE TABLE `programa_lealtad` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Programa de lealtad para clientes frecuentes';
 
--- SISTEMA DE REFERIDOS
 CREATE TABLE `referidos` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `cliente_referidor_id` INT UNSIGNED NOT NULL,
@@ -653,7 +720,6 @@ COMMENT='Sistema de referidos entre clientes';
 -- TABLAS DE CONFIGURACIÓN Y CATÁLOGOS
 -- ============================================================================
 
--- CONFIGURACIÓN DEL SISTEMA
 CREATE TABLE `configuracion_sistema` (
   `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `clave` VARCHAR(100) NOT NULL,
@@ -669,7 +735,6 @@ CREATE TABLE `configuracion_sistema` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
 COMMENT='Configuración general del sistema';
 
--- TIPOS DE NEGOCIO (MULTI-INDUSTRIA)
 CREATE TABLE `tipos_negocio` (
   `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `nombre` VARCHAR(100) NOT NULL,
@@ -689,10 +754,9 @@ CREATE TABLE `tipos_negocio` (
 COMMENT='Tipos de negocio para sistema multi-industria';
 
 -- ============================================================================
--- TABLAS DE AUDITORÍA Y LOGS
+-- TABLA DE AUDITORÍA
 -- ============================================================================
 
--- AUDITORÍA DE CAMBIOS
 CREATE TABLE `audit_log` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `tabla` VARCHAR(100) NOT NULL,
@@ -718,11 +782,11 @@ CREATE TABLE `audit_log` (
 COMMENT='Log de auditoría para tracking de cambios';
 
 -- ============================================================================
--- DATOS INICIALES ESENCIALES
+-- DATOS INICIALES (INSERT IGNORE PARA IDEMPOTENCIA)
 -- ============================================================================
 
--- Estados de orden básicos
-INSERT INTO `estados_orden` (`id`, `nombre`, `color`, `descripcion`, `workflow_order`, `requiere_aprobacion`, `auto_notification`) VALUES
+-- Estados de orden básicos (INSERT IGNORE para no duplicar)
+INSERT IGNORE INTO `estados_orden` (`id`, `nombre`, `color`, `descripcion`, `workflow_order`, `requiere_aprobacion`, `auto_notification`) VALUES
 (1, 'Recibido', '#6B7280', 'Orden recién ingresada al sistema', 1, 0, 1),
 (2, 'En Diagnóstico', '#3B82F6', 'Vehículo en proceso de diagnóstico', 2, 0, 1),
 (3, 'Cotización Lista', '#F59E0B', 'Cotización preparada, esperando aprobación', 3, 1, 1),
@@ -734,39 +798,39 @@ INSERT INTO `estados_orden` (`id`, `nombre`, `color`, `descripcion`, `workflow_o
 (9, 'Entregado', '#059669', 'Vehículo entregado al cliente', 9, 0, 1),
 (10, 'Cancelado', '#EF4444', 'Orden cancelada', 99, 1, 1);
 
--- Elementos de inspección básicos
-INSERT INTO `elementos_inspeccion` (`nombre`, `categoria`, `obligatorio`, `orden_visual`) VALUES
-('Luces Frontales', 'Exteriores', 1, 1),
-('Cuarto de Luces', 'Exteriores', 1, 2),
-('Antena', 'Exteriores', 0, 3),
-('Espejos Laterales', 'Exteriores', 1, 4),
-('Cristales', 'Exteriores', 1, 5),
-('Emblemas', 'Exteriores', 0, 6),
-('Llantas', 'Exteriores', 1, 7),
-('Llanta de Refacción', 'Exteriores', 0, 8),
-('Tapón de Ruedas', 'Exteriores', 0, 9),
-('Molduras', 'Exteriores', 0, 10),
-('Tapón de Gasolina', 'Exteriores', 1, 11),
-('Limpiadores', 'Exteriores', 1, 12),
-('Gato', 'Herramientas', 0, 13),
-('Herramienta', 'Herramientas', 0, 14),
-('Extinguidor', 'Seguridad', 0, 15),
-('Instrumentos del Tablero', 'Interiores', 1, 16),
-('Calefacción', 'Interiores', 1, 17),
-('Sistema de Sonido', 'Interiores', 0, 18),
-('Bocinas', 'Interiores', 0, 19),
-('Espejo Retrovisor', 'Interiores', 1, 20),
-('Cinturones de Seguridad', 'Interiores', 1, 21),
-('Botonería General', 'Interiores', 1, 22),
-('Manijas', 'Interiores', 1, 23),
-('Tapetes', 'Interiores', 0, 24),
-('Vestiduras', 'Interiores', 1, 25),
-('Radio', 'Interiores', 0, 26),
-('Encendedor', 'Interiores', 0, 27),
-('Documentos', 'Documentación', 0, 28);
+-- Elementos de inspección básicos (INSERT IGNORE)
+INSERT IGNORE INTO `elementos_inspeccion` (`id`, `nombre`, `categoria`, `obligatorio`, `orden_visual`) VALUES
+(1, 'Luces Frontales', 'Exteriores', 1, 1),
+(2, 'Cuarto de Luces', 'Exteriores', 1, 2),
+(3, 'Antena', 'Exteriores', 0, 3),
+(4, 'Espejos Laterales', 'Exteriores', 1, 4),
+(5, 'Cristales', 'Exteriores', 1, 5),
+(6, 'Emblemas', 'Exteriores', 0, 6),
+(7, 'Llantas', 'Exteriores', 1, 7),
+(8, 'Llanta de Refacción', 'Exteriores', 0, 8),
+(9, 'Tapón de Ruedas', 'Exteriores', 0, 9),
+(10, 'Molduras', 'Exteriores', 0, 10),
+(11, 'Tapón de Gasolina', 'Exteriores', 1, 11),
+(12, 'Limpiadores', 'Exteriores', 1, 12),
+(13, 'Gato', 'Herramientas', 0, 13),
+(14, 'Herramienta', 'Herramientas', 0, 14),
+(15, 'Extinguidor', 'Seguridad', 0, 15),
+(16, 'Instrumentos del Tablero', 'Interiores', 1, 16),
+(17, 'Calefacción', 'Interiores', 1, 17),
+(18, 'Sistema de Sonido', 'Interiores', 0, 18),
+(19, 'Bocinas', 'Interiores', 0, 19),
+(20, 'Espejo Retrovisor', 'Interiores', 1, 20),
+(21, 'Cinturones de Seguridad', 'Interiores', 1, 21),
+(22, 'Botonería General', 'Interiores', 1, 22),
+(23, 'Manijas', 'Interiores', 1, 23),
+(24, 'Tapetes', 'Interiores', 0, 24),
+(25, 'Vestiduras', 'Interiores', 1, 25),
+(26, 'Radio', 'Interiores', 0, 26),
+(27, 'Encendedor', 'Interiores', 0, 27),
+(28, 'Documentos', 'Documentación', 0, 28);
 
--- Estados de seguridad básicos
-INSERT INTO `estados_seguridad` (`id`, `nombre`, `descripcion`, `color`, `icon`, `orden_visualizacion`) VALUES
+-- Estados de seguridad básicos (INSERT IGNORE)
+INSERT IGNORE INTO `estados_seguridad` (`id`, `nombre`, `descripcion`, `color`, `icon`, `orden_visualizacion`) VALUES
 (1, 'Excelente', 'Componente en perfecto estado', '#28a745', 'check-circle', 1),
 (2, 'Bueno', 'Componente en buen estado', '#17a2b8', 'check', 2),
 (3, 'Regular', 'Componente necesita atención', '#ffc107', 'exclamation-triangle', 3),
@@ -774,165 +838,109 @@ INSERT INTO `estados_seguridad` (`id`, `nombre`, `descripcion`, `color`, `icon`,
 (5, 'Crítico', 'Componente debe ser reemplazado inmediatamente', '#dc3545', 'times-circle', 5),
 (6, 'No Aplica', 'No aplica para este vehículo', '#6c757d', 'minus', 6);
 
--- ============================================================================
--- TABLA: PUNTOS_SEGURIDAD_CATALOGO (SAFETY POINTS CATALOG)
--- ============================================================================
-
-CREATE TABLE `puntos_seguridad_catalogo` (
-  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `nombre` VARCHAR(100) NOT NULL,
-  `categoria` VARCHAR(50) NOT NULL,
-  `descripcion` TEXT NULL,
-  `orden_visualizacion` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  `es_critico` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-  `activo` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
-  PRIMARY KEY (`id`),
-  KEY `idx_puntos_categoria` (`categoria`, `orden_visualizacion`),
-  KEY `idx_puntos_critico` (`es_critico`),
-  KEY `idx_puntos_activo` (`activo`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
-COMMENT='Catálogo de puntos de seguridad para inspección vehicular';
-
--- ============================================================================
--- TABLA: ORDEN_PUNTOS_SEGURIDAD (ORDER SAFETY POINTS)
--- ============================================================================
-
-CREATE TABLE `orden_puntos_seguridad` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `orden_id` INT UNSIGNED NOT NULL,
-  `punto_seguridad_id` SMALLINT UNSIGNED NOT NULL,
-  `estado_id` SMALLINT UNSIGNED NOT NULL,
-  `notas` TEXT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_orden_punto` (`orden_id`, `punto_seguridad_id`),
-  KEY `idx_orden_puntos_orden` (`orden_id`),
-  KEY `idx_orden_puntos_punto` (`punto_seguridad_id`),
-  KEY `idx_orden_puntos_estado` (`estado_id`),
-  
-  CONSTRAINT `fk_orden_puntos_orden` 
-    FOREIGN KEY (`orden_id`) REFERENCES `ordenes_servicio` (`id`) 
-    ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_orden_puntos_punto` 
-    FOREIGN KEY (`punto_seguridad_id`) REFERENCES `puntos_seguridad_catalogo` (`id`) 
-    ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_orden_puntos_estado` 
-    FOREIGN KEY (`estado_id`) REFERENCES `estados_seguridad` (`id`) 
-    ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
-COMMENT='Puntos de seguridad evaluados por orden de servicio';
-
--- ============================================================================
--- DATOS INICIALES: PUNTOS_SEGURIDAD_CATALOGO
--- ============================================================================
-
-INSERT INTO `puntos_seguridad_catalogo` (`nombre`, `categoria`, `descripcion`, `orden_visualizacion`, `es_critico`) VALUES
+-- Puntos de seguridad del catálogo (INSERT IGNORE)
+INSERT IGNORE INTO `puntos_seguridad_catalogo` (`id`, `nombre`, `categoria`, `descripcion`, `orden_visualizacion`, `es_critico`) VALUES
 -- Sistema de Frenos (Críticos)
-('Pastillas de Freno Delanteras', 'Frenos', 'Estado de las pastillas/balatas delanteras', 1, 1),
-('Pastillas de Freno Traseras', 'Frenos', 'Estado de las pastillas/balatas traseras', 2, 1),
-('Discos de Freno Delanteros', 'Frenos', 'Condición de los discos de freno delanteros', 3, 1),
-('Discos de Freno Traseros', 'Frenos', 'Condición de los discos de freno traseros', 4, 1),
-('Líquido de Frenos', 'Frenos', 'Nivel y calidad del líquido de frenos', 5, 1),
-('Pedal de Freno', 'Frenos', 'Funcionamiento y sensación del pedal', 6, 1),
-('Freno de Mano', 'Frenos', 'Funcionamiento del freno de estacionamiento', 7, 1),
+(1, 'Pastillas de Freno Delanteras', 'Frenos', 'Estado de las pastillas/balatas delanteras', 1, 1),
+(2, 'Pastillas de Freno Traseras', 'Frenos', 'Estado de las pastillas/balatas traseras', 2, 1),
+(3, 'Discos de Freno Delanteros', 'Frenos', 'Condición de los discos de freno delanteros', 3, 1),
+(4, 'Discos de Freno Traseros', 'Frenos', 'Condición de los discos de freno traseros', 4, 1),
+(5, 'Líquido de Frenos', 'Frenos', 'Nivel y calidad del líquido de frenos', 5, 1),
+(6, 'Pedal de Freno', 'Frenos', 'Funcionamiento y sensación del pedal', 6, 1),
+(7, 'Freno de Mano', 'Frenos', 'Funcionamiento del freno de estacionamiento', 7, 1),
 
 -- Sistema de Suspensión (Críticos)
-('Amortiguadores Delanteros', 'Suspensión', 'Estado de amortiguadores delanteros', 8, 1),
-('Amortiguadores Traseros', 'Suspensión', 'Estado de amortiguadores traseros', 9, 1),
-('Resortes Delanteros', 'Suspensión', 'Condición de resortes delanteros', 10, 1),
-('Resortes Traseros', 'Suspensión', 'Condición de resortes traseros', 11, 1),
-('Rotulas', 'Suspensión', 'Estado de las rótulas de suspensión', 12, 1),
-('Terminales de Dirección', 'Suspensión', 'Condición de terminales de dirección', 13, 1),
+(8, 'Amortiguadores Delanteros', 'Suspensión', 'Estado de amortiguadores delanteros', 8, 1),
+(9, 'Amortiguadores Traseros', 'Suspensión', 'Estado de amortiguadores traseros', 9, 1),
+(10, 'Resortes Delanteros', 'Suspensión', 'Condición de resortes delanteros', 10, 1),
+(11, 'Resortes Traseros', 'Suspensión', 'Condición de resortes traseros', 11, 1),
+(12, 'Rotulas', 'Suspensión', 'Estado de las rótulas de suspensión', 12, 1),
+(13, 'Terminales de Dirección', 'Suspensión', 'Condición de terminales de dirección', 13, 1),
 
 -- Llantas y Neumáticos (Críticos)
-('Llanta Delantera Izquierda', 'Neumáticos', 'Estado del neumático delantero izquierdo', 14, 1),
-('Llanta Delantera Derecha', 'Neumáticos', 'Estado del neumático delantero derecho', 15, 1),
-('Llanta Trasera Izquierda', 'Neumáticos', 'Estado del neumático trasero izquierdo', 16, 1),
-('Llanta Trasera Derecha', 'Neumáticos', 'Estado del neumático trasero derecho', 17, 1),
-('Llanta de Refacción', 'Neumáticos', 'Estado de la llanta de repuesto', 18, 0),
-('Alineación', 'Neumáticos', 'Estado de la alineación del vehículo', 19, 1),
-('Balanceo', 'Neumáticos', 'Balanceo de las ruedas', 20, 1),
+(14, 'Llanta Delantera Izquierda', 'Neumáticos', 'Estado del neumático delantero izquierdo', 14, 1),
+(15, 'Llanta Delantera Derecha', 'Neumáticos', 'Estado del neumático delantero derecho', 15, 1),
+(16, 'Llanta Trasera Izquierda', 'Neumáticos', 'Estado del neumático trasero izquierdo', 16, 1),
+(17, 'Llanta Trasera Derecha', 'Neumáticos', 'Estado del neumático trasero derecho', 17, 1),
+(18, 'Llanta de Refacción', 'Neumáticos', 'Estado de la llanta de repuesto', 18, 0),
+(19, 'Alineación', 'Neumáticos', 'Estado de la alineación del vehículo', 19, 1),
+(20, 'Balanceo', 'Neumáticos', 'Balanceo de las ruedas', 20, 1),
 
 -- Sistema de Luces (Críticos para seguridad vial)
-('Faros Delanteros', 'Luces', 'Funcionamiento de faros principales', 21, 1),
-('Luces Traseras', 'Luces', 'Funcionamiento de luces traseras', 22, 1),
-('Intermitentes', 'Luces', 'Funcionamiento de direccionales', 23, 1),
-('Luces de Freno', 'Luces', 'Funcionamiento de luces de stop', 24, 1),
-('Luces de Reversa', 'Luces', 'Funcionamiento de luces de reversa', 25, 0),
-('Faros Antiniebla', 'Luces', 'Funcionamiento de faros antiniebla', 26, 0),
+(21, 'Faros Delanteros', 'Luces', 'Funcionamiento de faros principales', 21, 1),
+(22, 'Luces Traseras', 'Luces', 'Funcionamiento de luces traseras', 22, 1),
+(23, 'Intermitentes', 'Luces', 'Funcionamiento de direccionales', 23, 1),
+(24, 'Luces de Freno', 'Luces', 'Funcionamiento de luces de stop', 24, 1),
+(25, 'Luces de Reversa', 'Luces', 'Funcionamiento de luces de reversa', 25, 0),
+(26, 'Faros Antiniebla', 'Luces', 'Funcionamiento de faros antiniebla', 26, 0),
 
 -- Motor y Transmisión
-('Aceite de Motor', 'Motor', 'Nivel y calidad del aceite de motor', 27, 1),
-('Filtro de Aceite', 'Motor', 'Condición del filtro de aceite', 28, 1),
-('Filtro de Aire', 'Motor', 'Estado del filtro de aire del motor', 29, 0),
-('Correas y Bandas', 'Motor', 'Estado de correas del motor', 30, 1),
-('Mangueras del Motor', 'Motor', 'Condición de mangueras del sistema', 31, 1),
-('Baterías', 'Motor', 'Estado de la batería del vehículo', 32, 1),
-('Alternador', 'Motor', 'Funcionamiento del alternador', 33, 1),
-('Marcha/Motor de Arranque', 'Motor', 'Funcionamiento del motor de arranque', 34, 1),
+(27, 'Aceite de Motor', 'Motor', 'Nivel y calidad del aceite de motor', 27, 1),
+(28, 'Filtro de Aceite', 'Motor', 'Condición del filtro de aceite', 28, 1),
+(29, 'Filtro de Aire', 'Motor', 'Estado del filtro de aire del motor', 29, 0),
+(30, 'Correas y Bandas', 'Motor', 'Estado de correas del motor', 30, 1),
+(31, 'Mangueras del Motor', 'Motor', 'Condición de mangueras del sistema', 31, 1),
+(32, 'Baterías', 'Motor', 'Estado de la batería del vehículo', 32, 1),
+(33, 'Alternador', 'Motor', 'Funcionamiento del alternador', 33, 1),
+(34, 'Marcha/Motor de Arranque', 'Motor', 'Funcionamiento del motor de arranque', 34, 1),
 
 -- Fluidos del Vehículo
-('Líquido de Transmisión', 'Fluidos', 'Nivel y calidad del ATF', 35, 1),
-('Líquido de Dirección', 'Fluidos', 'Nivel del líquido hidráulico', 36, 1),
-('Refrigerante', 'Fluidos', 'Nivel y calidad del anticongelante', 37, 1),
-('Líquido Limpiaparabrisas', 'Fluidos', 'Nivel del líquido lavaparabrisas', 38, 0),
+(35, 'Líquido de Transmisión', 'Fluidos', 'Nivel y calidad del ATF', 35, 1),
+(36, 'Líquido de Dirección', 'Fluidos', 'Nivel del líquido hidráulico', 36, 1),
+(37, 'Refrigerante', 'Fluidos', 'Nivel y calidad del anticongelante', 37, 1),
+(38, 'Líquido Limpiaparabrisas', 'Fluidos', 'Nivel del líquido lavaparabrisas', 38, 0),
 
 -- Escape y Emisiones
-('Sistema de Escape', 'Escape', 'Condición del sistema de escape', 39, 1),
-('Catalizador', 'Escape', 'Funcionamiento del convertidor catalítico', 40, 1),
-('Sensor de Oxígeno', 'Escape', 'Estado de sondas lambda', 41, 0),
+(39, 'Sistema de Escape', 'Escape', 'Condición del sistema de escape', 39, 1),
+(40, 'Catalizador', 'Escape', 'Funcionamiento del convertidor catalítico', 40, 1),
+(41, 'Sensor de Oxígeno', 'Escape', 'Estado de sondas lambda', 41, 0),
 
 -- Carrocería y Exteriores
-('Parabrisas', 'Carrocería', 'Estado del cristal frontal', 42, 1),
-('Espejos Retrovisores', 'Carrocería', 'Condición de espejos', 43, 1),
-('Limpiaparabrisas', 'Carrocería', 'Funcionamiento de plumillas', 44, 1),
-('Puertas', 'Carrocería', 'Funcionamiento de puertas', 45, 0),
-('Ventanas', 'Carrocería', 'Estado de cristales laterales', 46, 0),
+(42, 'Parabrisas', 'Carrocería', 'Estado del cristal frontal', 42, 1),
+(43, 'Espejos Retrovisores', 'Carrocería', 'Condición de espejos', 43, 1),
+(44, 'Limpiaparabrisas', 'Carrocería', 'Funcionamiento de plumillas', 44, 1),
+(45, 'Puertas', 'Carrocería', 'Funcionamiento de puertas', 45, 0),
+(46, 'Ventanas', 'Carrocería', 'Estado de cristales laterales', 46, 0),
 
 -- Seguridad Interior
-('Cinturones de Seguridad', 'Seguridad', 'Funcionamiento de cinturones', 47, 1),
-('Airbags', 'Seguridad', 'Sistema de bolsas de aire', 48, 1),
-('Bocina/Claxon', 'Seguridad', 'Funcionamiento de la bocina', 49, 1),
+(47, 'Cinturones de Seguridad', 'Seguridad', 'Funcionamiento de cinturones', 47, 1),
+(48, 'Airbags', 'Seguridad', 'Sistema de bolsas de aire', 48, 1),
+(49, 'Bocina/Claxon', 'Seguridad', 'Funcionamiento de la bocina', 49, 1),
 
 -- Aires Acondicionado y Confort
-('Sistema A/C', 'Confort', 'Funcionamiento del aire acondicionado', 50, 0),
-('Calefacción', 'Confort', 'Sistema de calefacción', 51, 0),
-('Filtro de Cabina', 'Confort', 'Estado del filtro del A/C', 52, 0);
+(50, 'Sistema A/C', 'Confort', 'Funcionamiento del aire acondicionado', 50, 0),
+(51, 'Calefacción', 'Confort', 'Sistema de calefacción', 51, 0),
+(52, 'Filtro de Cabina', 'Confort', 'Estado del filtro del A/C', 52, 0);
 
--- Servicios básicos del catálogo
-INSERT INTO `servicios_catalogo` (`nombre`, `categoria`, `descripcion`, `precio_base`, `tiempo_estimado_horas`) VALUES
-('Cambio de Aceite y Filtro', 'Mantenimiento', 'Cambio de aceite de motor y filtro de aceite', 350.00, 0.50),
-('Afinación Menor', 'Mantenimiento', 'Cambio de bujías, filtros básicos', 800.00, 2.00),
-('Afinación Mayor', 'Mantenimiento', 'Afinación completa con cambio de componentes', 1500.00, 4.00),
-('Servicio de Frenos Delanteros', 'Frenos', 'Cambio de balatas delanteras', 750.00, 1.50),
-('Servicio de Frenos Traseros', 'Frenos', 'Cambio de balatas traseras', 650.00, 1.00),
-('Alineación y Balanceo', 'Llantas', 'Alineación de dirección y balanceo de llantas', 500.00, 1.00),
-('Diagnóstico Computarizado', 'Diagnóstico', 'Escaneo completo del vehículo', 200.00, 0.50),
-('Cambio de Batería', 'Eléctrico', 'Instalación de batería nueva', 100.00, 0.25),
-('Servicio de Suspensión', 'Suspensión', 'Revisión y reparación de suspensión', 1200.00, 3.00),
-('Servicio de Aire Acondicionado', 'Clima', 'Mantenimiento de sistema A/C', 800.00, 2.00);
+-- Servicios básicos del catálogo (INSERT IGNORE)
+INSERT IGNORE INTO `servicios_catalogo` (`id`, `nombre`, `categoria`, `descripcion`, `precio_base`, `tiempo_estimado_horas`) VALUES
+(1, 'Cambio de Aceite y Filtro', 'Mantenimiento', 'Cambio de aceite de motor y filtro de aceite', 350.00, 0.50),
+(2, 'Afinación Menor', 'Mantenimiento', 'Cambio de bujías, filtros básicos', 800.00, 2.00),
+(3, 'Afinación Mayor', 'Mantenimiento', 'Afinación completa con cambio de componentes', 1500.00, 4.00),
+(4, 'Servicio de Frenos Delanteros', 'Frenos', 'Cambio de balatas delanteras', 750.00, 1.50),
+(5, 'Servicio de Frenos Traseros', 'Frenos', 'Cambio de balatas traseras', 650.00, 1.00),
+(6, 'Alineación y Balanceo', 'Llantas', 'Alineación de dirección y balanceo de llantas', 500.00, 1.00),
+(7, 'Diagnóstico Computarizado', 'Diagnóstico', 'Escaneo completo del vehículo', 200.00, 0.50),
+(8, 'Cambio de Batería', 'Eléctrico', 'Instalación de batería nueva', 100.00, 0.25),
+(9, 'Servicio de Suspensión', 'Suspensión', 'Revisión y reparación de suspensión', 1200.00, 3.00),
+(10, 'Servicio de Aire Acondicionado', 'Clima', 'Mantenimiento de sistema A/C', 800.00, 2.00);
 
--- Configuración inicial del sistema
-INSERT INTO `configuracion_sistema` (`clave`, `valor`, `tipo_dato`, `descripcion`, `categoria`) VALUES
-('iva_porcentaje', '16.00', 'number', 'Porcentaje de IVA por defecto', 'facturacion'),
-('nombre_empresa', 'SAG GARAGE', 'string', 'Nombre de la empresa', 'empresa'),
-('telefono_empresa', '', 'string', 'Teléfono principal de la empresa', 'empresa'),
-('email_empresa', 'contacto@saggarage.com', 'string', 'Email principal de la empresa', 'empresa'),
-('direccion_empresa', '', 'string', 'Dirección de la empresa', 'empresa'),
-('formato_numero_orden', 'OS-{YEAR}-{ID}', 'string', 'Formato para números de orden', 'ordenes'),
-('garantia_dias_default', '30', 'number', 'Días de garantía por defecto', 'garantias'),
-('whatsapp_api_enabled', 'false', 'boolean', 'Habilitar notificaciones por WhatsApp', 'notificaciones'),
-('portal_cliente_enabled', 'true', 'boolean', 'Habilitar portal público del cliente', 'portal'),
-('programa_lealtad_enabled', 'true', 'boolean', 'Habilitar programa de lealtad', 'lealtad');
+-- Configuración inicial del sistema (INSERT IGNORE)
+INSERT IGNORE INTO `configuracion_sistema` (`id`, `clave`, `valor`, `tipo_dato`, `descripcion`, `categoria`) VALUES
+(1, 'iva_porcentaje', '16.00', 'number', 'Porcentaje de IVA por defecto', 'facturacion'),
+(2, 'nombre_empresa', 'SAG GARAGE', 'string', 'Nombre de la empresa', 'empresa'),
+(3, 'telefono_empresa', '', 'string', 'Teléfono principal de la empresa', 'empresa'),
+(4, 'email_empresa', 'contacto@saggarage.com', 'string', 'Email principal de la empresa', 'empresa'),
+(5, 'direccion_empresa', '', 'string', 'Dirección de la empresa', 'empresa'),
+(6, 'formato_numero_orden', 'OS-{YEAR}-{ID}', 'string', 'Formato para números de orden', 'ordenes'),
+(7, 'garantia_dias_default', '30', 'number', 'Días de garantía por defecto', 'garantias'),
+(8, 'whatsapp_api_enabled', 'false', 'boolean', 'Habilitar notificaciones por WhatsApp', 'notificaciones'),
+(9, 'portal_cliente_enabled', 'true', 'boolean', 'Habilitar portal público del cliente', 'portal'),
+(10, 'programa_lealtad_enabled', 'true', 'boolean', 'Habilitar programa de lealtad', 'lealtad');
 
--- Tipo de negocio inicial (Taller Mecánico)
-INSERT INTO `tipos_negocio` (`nombre`, `slug`, `descripcion`, `configuracion_json`) VALUES
-('Taller Mecánico', 'taller-mecanico', 'Taller de reparación y mantenimiento automotriz', 
+-- Tipo de negocio inicial (INSERT IGNORE)
+INSERT IGNORE INTO `tipos_negocio` (`id`, `nombre`, `slug`, `descripcion`, `configuracion_json`) VALUES
+(1, 'Taller Mecánico', 'taller-mecanico', 'Taller de reparación y mantenimiento automotriz', 
 JSON_OBJECT(
     'requiere_vehiculo', true,
     'maneja_refacciones', true,
@@ -992,7 +1000,6 @@ DELIMITER ;
 DELIMITER $$
 
 -- Obtener todos los estados de seguridad
-DROP PROCEDURE IF EXISTS GetEstadosSeguridad$$
 CREATE PROCEDURE GetEstadosSeguridad()
 BEGIN
     SELECT 
@@ -1011,7 +1018,6 @@ BEGIN
 END$$
 
 -- Obtener estado de seguridad por ID
-DROP PROCEDURE IF EXISTS GetEstadoSeguridadById$$
 CREATE PROCEDURE GetEstadoSeguridadById(IN estado_id INT)
 BEGIN
     SELECT 
@@ -1029,7 +1035,6 @@ BEGIN
 END$$
 
 -- Crear estado de seguridad
-DROP PROCEDURE IF EXISTS CreateEstadoSeguridad$$
 CREATE PROCEDURE CreateEstadoSeguridad(
     IN p_nombre VARCHAR(50),
     IN p_descripcion TEXT,
@@ -1055,7 +1060,6 @@ BEGIN
 END$$
 
 -- Actualizar estado de seguridad
-DROP PROCEDURE IF EXISTS UpdateEstadoSeguridad$$
 CREATE PROCEDURE UpdateEstadoSeguridad(
     IN p_id INT,
     IN p_nombre VARCHAR(50),
@@ -1097,7 +1101,6 @@ END$$
 -- ============================================================================
 
 -- Obtener todos los puntos de seguridad del catálogo
-DROP PROCEDURE IF EXISTS GetPuntosSeguridadCatalogo$$
 CREATE PROCEDURE GetPuntosSeguridadCatalogo()
 BEGIN
     SELECT 
@@ -1116,7 +1119,6 @@ BEGIN
 END$$
 
 -- Obtener punto de seguridad por ID
-DROP PROCEDURE IF EXISTS GetPuntoSeguridadById$$
 CREATE PROCEDURE GetPuntoSeguridadById(IN punto_id INT)
 BEGIN
     SELECT 
@@ -1134,7 +1136,6 @@ BEGIN
 END$$
 
 -- Crear punto de seguridad
-DROP PROCEDURE IF EXISTS CreatePuntoSeguridad$$
 CREATE PROCEDURE CreatePuntoSeguridad(
     IN p_nombre VARCHAR(100),
     IN p_categoria VARCHAR(50),
@@ -1160,7 +1161,6 @@ BEGIN
 END$$
 
 -- Actualizar punto de seguridad
-DROP PROCEDURE IF EXISTS UpdatePuntoSeguridad$$
 CREATE PROCEDURE UpdatePuntoSeguridad(
     IN p_id INT,
     IN p_nombre VARCHAR(100),
@@ -1198,7 +1198,6 @@ BEGIN
 END$$
 
 -- Obtener puntos de seguridad por orden
-DROP PROCEDURE IF EXISTS GetPuntosSeguridadByOrden$$
 CREATE PROCEDURE GetPuntosSeguridadByOrden(IN orden_id INT)
 BEGIN
     SELECT 
@@ -1287,19 +1286,18 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 SET TIME_ZONE=@OLD_TIME_ZONE;
 
 -- ============================================================================
--- FIN DEL SCHEMA V2.0 "DE LOS DIOSES"
+-- FIN DEL SCHEMA V2.0 "IDEMPOTENTE DE LOS DIOSES"
 -- ============================================================================
 
--- RESUMEN DE MEJORAS:
--- ✅ Sin campos NULL basura - Solo lo esencial
--- ✅ Arquitectura normalizada - Eliminada redundancia  
--- ✅ Tipos de datos optimizados - Performance máximo
--- ✅ Índices estratégicos - Queries ultra rápidos
--- ✅ Constraints inteligentes - Integridad de datos
--- ✅ Particionado por fechas - Escalabilidad
--- ✅ Triggers para auditoría - Tracking completo
--- ✅ Preparado para multi-industria - Flexibilidad total
--- ✅ Funcionalidades premium integradas - Futuro-proof
--- ✅ Enterprise-grade - Digno de los dioses
+-- RESUMEN DE MEJORAS IDEMPOTENTES:
+-- ✅ USUARIOS NUNCA SE DROPEA - Tabla protegida
+-- ✅ Todas las demás tablas se recrean completamente
+-- ✅ INSERT IGNORE para datos iniciales - Sin duplicados
+-- ✅ IF EXISTS en DROP - Sin errores si no existe
+-- ✅ 100% re-ejecutable - Cualquier cantidad de veces
+-- ✅ Triggers, procedures y vistas se recrean siempre
+-- ✅ Índices siempre actualizados - Sin conflictos
+-- ✅ FK constraints siempre correctas
+-- ✅ Schema completamente limpio en cada ejecución
 
-SELECT 'SAG GARAGE V2.0 - BASE DE DATOS LISTA' as STATUS;
+SELECT 'SAG GARAGE V2.0 - SCHEMA IDEMPOTENTE LISTO ✅' as STATUS;
