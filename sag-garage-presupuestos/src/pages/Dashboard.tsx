@@ -7,9 +7,19 @@ import { ordenesAPI } from '../services/api';
 import type { Orden } from '../types';
 import { Button } from '../components/ui/Button';
 
+interface EstadoOrden {
+  id: number;
+  nombre: string;
+  color: string;
+  descripcion: string;
+  orden_visual: number;
+  activo: boolean;
+}
+
 export const Dashboard = () => {
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [filteredOrdenes, setFilteredOrdenes] = useState<Orden[]>([]);
+  const [estados, setEstados] = useState<EstadoOrden[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<string>('todas');
@@ -22,6 +32,7 @@ export const Dashboard = () => {
 
   useEffect(() => {
     loadOrdenes();
+    loadEstados();
   }, []);
 
   // Aplicar el tema al documento
@@ -50,6 +61,26 @@ export const Dashboard = () => {
       console.error('❌ Error al cargar órdenes:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadEstados = async () => {
+    try {
+      console.log('🏷️ Cargando estados desde API...');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/ordenes/estados`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Estados cargados:', data);
+        setEstados(data);
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar estados:', error);
     }
   };
 
@@ -82,29 +113,45 @@ export const Dashboard = () => {
 
     // Filtrar por estado
     if (estadoFilter !== 'todas') {
-      filtered = filtered.filter((orden) => orden.estado === estadoFilter);
+      filtered = filtered.filter((orden) => {
+        const ordenAny = orden as any;
+        const estadoId = ordenAny.estado_id || orden.estado_id;
+        return estadoId?.toString() === estadoFilter;
+      });
     }
 
     setFilteredOrdenes(filtered);
   };
 
-  const getEstadoBadge = (estado: string) => {
-    // Mapear "pendiente" a "abierta" para órdenes existentes
-    const normalizedEstado = (estado === 'pendiente' ? 'abierta' : estado) as 'abierta' | 'cerrada';
+  const getEstadoBadge = (estadoId: number | string, estadoNombre?: string) => {
+    // Buscar el estado en la lista cargada del backend
+    const estado = estados.find(e => e.id.toString() === estadoId?.toString());
     
-    const badges = {
-      abierta: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      cerrada: 'bg-sag-100 text-sag-800 dark:bg-sag-900/30 dark:text-sag-400',
+    if (estado) {
+      return (
+        <span 
+          className="px-3 py-1 rounded-full text-xs font-medium text-white"
+          style={{ backgroundColor: estado.color }}
+        >
+          {estado.nombre}
+        </span>
+      );
+    }
+    
+    // Fallback para estados no encontrados o valores legacy
+    const legacyBadges: { [key: string]: string } = {
+      'abierta': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      'cerrada': 'bg-sag-100 text-sag-800 dark:bg-sag-900/30 dark:text-sag-400',
+      'pendiente': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      'completada': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     };
-
-    const labels = {
-      abierta: 'Abierta',
-      cerrada: 'Cerrada',
-    };
-
+    
+    const estadoStr = (estadoNombre || estadoId || 'pendiente').toString().toLowerCase();
+    const cssClass = legacyBadges[estadoStr] || legacyBadges['pendiente'];
+    
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badges[normalizedEstado]}`}>
-        {labels[normalizedEstado]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${cssClass}`}>
+        {estadoNombre || estadoStr.charAt(0).toUpperCase() + estadoStr.slice(1)}
       </span>
     );
   };
@@ -295,8 +342,11 @@ export const Dashboard = () => {
                 className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-sag-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
                 <option value="todas">Todos los estados</option>
-                <option value="abierta">Abiertas</option>
-                <option value="cerrada">Cerradas</option>
+                {estados.map((estado) => (
+                  <option key={estado.id} value={estado.id.toString()}>
+                    {estado.nombre}
+                  </option>
+                ))}
               </select>
 
               <Button
@@ -391,7 +441,7 @@ export const Dashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getEstadoBadge((ordenAny as any).estado || orden.estado)}
+                        {getEstadoBadge(ordenAny.estado_id || 1, ordenAny.estado_nombre)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900 dark:text-white">

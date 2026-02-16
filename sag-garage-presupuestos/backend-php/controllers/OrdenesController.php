@@ -127,7 +127,7 @@ class OrdenesController {
             $total = $resumen['total'] ?? 0;
             $anticipo = $resumen['anticipo'] ?? 0;
             
-            // Crear orden usando stored procedure
+            // Crear orden usando stored procedure - Estado inicial: 1 (Recibido)
             $stmt = $this->db->prepare('
                 CALL sp_orden_create(?, ?, ?, ?, ?, ?, 1, "media", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, @orden_id)
             ');
@@ -297,6 +297,33 @@ class OrdenesController {
             http_response_code(500);
             echo json_encode([
                 'error' => 'Error al cambiar estado',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Obtener estados disponibles - GET /api/ordenes/estados
+     */
+    public function getEstados() {
+        try {
+            requireAuth();
+            
+            $stmt = $this->db->prepare('
+                SELECT id, nombre, color, descripcion, orden_visual, activo 
+                FROM estados_orden 
+                WHERE activo = 1 
+                ORDER BY orden_visual
+            ');
+            $stmt->execute();
+            $estados = $stmt->fetchAll();
+            
+            echo json_encode($estados);
+            
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Error al obtener estados',
                 'message' => $e->getMessage()
             ]);
         }

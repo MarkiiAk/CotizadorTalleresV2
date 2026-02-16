@@ -144,6 +144,7 @@ CREATE TABLE `estados_orden` (
   `auto_notification` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
   `activo` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_estados_nombre` (`nombre`),
@@ -773,6 +774,136 @@ INSERT INTO `estados_seguridad` (`id`, `nombre`, `descripcion`, `color`, `icon`,
 (5, 'Crítico', 'Componente debe ser reemplazado inmediatamente', '#dc3545', 'times-circle', 5),
 (6, 'No Aplica', 'No aplica para este vehículo', '#6c757d', 'minus', 6);
 
+-- ============================================================================
+-- TABLA: PUNTOS_SEGURIDAD_CATALOGO (SAFETY POINTS CATALOG)
+-- ============================================================================
+
+CREATE TABLE `puntos_seguridad_catalogo` (
+  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(100) NOT NULL,
+  `categoria` VARCHAR(50) NOT NULL,
+  `descripcion` TEXT NULL,
+  `orden_visualizacion` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `es_critico` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+  `activo` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (`id`),
+  KEY `idx_puntos_categoria` (`categoria`, `orden_visualizacion`),
+  KEY `idx_puntos_critico` (`es_critico`),
+  KEY `idx_puntos_activo` (`activo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
+COMMENT='Catálogo de puntos de seguridad para inspección vehicular';
+
+-- ============================================================================
+-- TABLA: ORDEN_PUNTOS_SEGURIDAD (ORDER SAFETY POINTS)
+-- ============================================================================
+
+CREATE TABLE `orden_puntos_seguridad` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `orden_id` INT UNSIGNED NOT NULL,
+  `punto_seguridad_id` SMALLINT UNSIGNED NOT NULL,
+  `estado_id` SMALLINT UNSIGNED NOT NULL,
+  `notas` TEXT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_orden_punto` (`orden_id`, `punto_seguridad_id`),
+  KEY `idx_orden_puntos_orden` (`orden_id`),
+  KEY `idx_orden_puntos_punto` (`punto_seguridad_id`),
+  KEY `idx_orden_puntos_estado` (`estado_id`),
+  
+  CONSTRAINT `fk_orden_puntos_orden` 
+    FOREIGN KEY (`orden_id`) REFERENCES `ordenes_servicio` (`id`) 
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_orden_puntos_punto` 
+    FOREIGN KEY (`punto_seguridad_id`) REFERENCES `puntos_seguridad_catalogo` (`id`) 
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_orden_puntos_estado` 
+    FOREIGN KEY (`estado_id`) REFERENCES `estados_seguridad` (`id`) 
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC
+COMMENT='Puntos de seguridad evaluados por orden de servicio';
+
+-- ============================================================================
+-- DATOS INICIALES: PUNTOS_SEGURIDAD_CATALOGO
+-- ============================================================================
+
+INSERT INTO `puntos_seguridad_catalogo` (`nombre`, `categoria`, `descripcion`, `orden_visualizacion`, `es_critico`) VALUES
+-- Sistema de Frenos (Críticos)
+('Pastillas de Freno Delanteras', 'Frenos', 'Estado de las pastillas/balatas delanteras', 1, 1),
+('Pastillas de Freno Traseras', 'Frenos', 'Estado de las pastillas/balatas traseras', 2, 1),
+('Discos de Freno Delanteros', 'Frenos', 'Condición de los discos de freno delanteros', 3, 1),
+('Discos de Freno Traseros', 'Frenos', 'Condición de los discos de freno traseros', 4, 1),
+('Líquido de Frenos', 'Frenos', 'Nivel y calidad del líquido de frenos', 5, 1),
+('Pedal de Freno', 'Frenos', 'Funcionamiento y sensación del pedal', 6, 1),
+('Freno de Mano', 'Frenos', 'Funcionamiento del freno de estacionamiento', 7, 1),
+
+-- Sistema de Suspensión (Críticos)
+('Amortiguadores Delanteros', 'Suspensión', 'Estado de amortiguadores delanteros', 8, 1),
+('Amortiguadores Traseros', 'Suspensión', 'Estado de amortiguadores traseros', 9, 1),
+('Resortes Delanteros', 'Suspensión', 'Condición de resortes delanteros', 10, 1),
+('Resortes Traseros', 'Suspensión', 'Condición de resortes traseros', 11, 1),
+('Rotulas', 'Suspensión', 'Estado de las rótulas de suspensión', 12, 1),
+('Terminales de Dirección', 'Suspensión', 'Condición de terminales de dirección', 13, 1),
+
+-- Llantas y Neumáticos (Críticos)
+('Llanta Delantera Izquierda', 'Neumáticos', 'Estado del neumático delantero izquierdo', 14, 1),
+('Llanta Delantera Derecha', 'Neumáticos', 'Estado del neumático delantero derecho', 15, 1),
+('Llanta Trasera Izquierda', 'Neumáticos', 'Estado del neumático trasero izquierdo', 16, 1),
+('Llanta Trasera Derecha', 'Neumáticos', 'Estado del neumático trasero derecho', 17, 1),
+('Llanta de Refacción', 'Neumáticos', 'Estado de la llanta de repuesto', 18, 0),
+('Alineación', 'Neumáticos', 'Estado de la alineación del vehículo', 19, 1),
+('Balanceo', 'Neumáticos', 'Balanceo de las ruedas', 20, 1),
+
+-- Sistema de Luces (Críticos para seguridad vial)
+('Faros Delanteros', 'Luces', 'Funcionamiento de faros principales', 21, 1),
+('Luces Traseras', 'Luces', 'Funcionamiento de luces traseras', 22, 1),
+('Intermitentes', 'Luces', 'Funcionamiento de direccionales', 23, 1),
+('Luces de Freno', 'Luces', 'Funcionamiento de luces de stop', 24, 1),
+('Luces de Reversa', 'Luces', 'Funcionamiento de luces de reversa', 25, 0),
+('Faros Antiniebla', 'Luces', 'Funcionamiento de faros antiniebla', 26, 0),
+
+-- Motor y Transmisión
+('Aceite de Motor', 'Motor', 'Nivel y calidad del aceite de motor', 27, 1),
+('Filtro de Aceite', 'Motor', 'Condición del filtro de aceite', 28, 1),
+('Filtro de Aire', 'Motor', 'Estado del filtro de aire del motor', 29, 0),
+('Correas y Bandas', 'Motor', 'Estado de correas del motor', 30, 1),
+('Mangueras del Motor', 'Motor', 'Condición de mangueras del sistema', 31, 1),
+('Baterías', 'Motor', 'Estado de la batería del vehículo', 32, 1),
+('Alternador', 'Motor', 'Funcionamiento del alternador', 33, 1),
+('Marcha/Motor de Arranque', 'Motor', 'Funcionamiento del motor de arranque', 34, 1),
+
+-- Fluidos del Vehículo
+('Líquido de Transmisión', 'Fluidos', 'Nivel y calidad del ATF', 35, 1),
+('Líquido de Dirección', 'Fluidos', 'Nivel del líquido hidráulico', 36, 1),
+('Refrigerante', 'Fluidos', 'Nivel y calidad del anticongelante', 37, 1),
+('Líquido Limpiaparabrisas', 'Fluidos', 'Nivel del líquido lavaparabrisas', 38, 0),
+
+-- Escape y Emisiones
+('Sistema de Escape', 'Escape', 'Condición del sistema de escape', 39, 1),
+('Catalizador', 'Escape', 'Funcionamiento del convertidor catalítico', 40, 1),
+('Sensor de Oxígeno', 'Escape', 'Estado de sondas lambda', 41, 0),
+
+-- Carrocería y Exteriores
+('Parabrisas', 'Carrocería', 'Estado del cristal frontal', 42, 1),
+('Espejos Retrovisores', 'Carrocería', 'Condición de espejos', 43, 1),
+('Limpiaparabrisas', 'Carrocería', 'Funcionamiento de plumillas', 44, 1),
+('Puertas', 'Carrocería', 'Funcionamiento de puertas', 45, 0),
+('Ventanas', 'Carrocería', 'Estado de cristales laterales', 46, 0),
+
+-- Seguridad Interior
+('Cinturones de Seguridad', 'Seguridad', 'Funcionamiento de cinturones', 47, 1),
+('Airbags', 'Seguridad', 'Sistema de bolsas de aire', 48, 1),
+('Bocina/Claxon', 'Seguridad', 'Funcionamiento de la bocina', 49, 1),
+
+-- Aires Acondicionado y Confort
+('Sistema A/C', 'Confort', 'Funcionamiento del aire acondicionado', 50, 0),
+('Calefacción', 'Confort', 'Sistema de calefacción', 51, 0),
+('Filtro de Cabina', 'Confort', 'Estado del filtro del A/C', 52, 0);
+
 -- Servicios básicos del catálogo
 INSERT INTO `servicios_catalogo` (`nombre`, `categoria`, `descripcion`, `precio_base`, `tiempo_estimado_horas`) VALUES
 ('Cambio de Aceite y Filtro', 'Mantenimiento', 'Cambio de aceite de motor y filtro de aceite', 350.00, 0.50),
@@ -959,6 +1090,133 @@ BEGIN
     SELECT p_id as id, 'Estado de seguridad actualizado exitosamente' as message;
     
     COMMIT;
+END$$
+
+-- ============================================================================
+-- STORED PROCEDURES PARA PUNTOS_SEGURIDAD_CATALOGO
+-- ============================================================================
+
+-- Obtener todos los puntos de seguridad del catálogo
+DROP PROCEDURE IF EXISTS GetPuntosSeguridadCatalogo$$
+CREATE PROCEDURE GetPuntosSeguridadCatalogo()
+BEGIN
+    SELECT 
+        id,
+        nombre,
+        categoria,
+        descripcion,
+        orden_visualizacion,
+        es_critico,
+        activo,
+        created_at,
+        updated_at
+    FROM puntos_seguridad_catalogo 
+    WHERE activo = 1
+    ORDER BY orden_visualizacion ASC, nombre ASC;
+END$$
+
+-- Obtener punto de seguridad por ID
+DROP PROCEDURE IF EXISTS GetPuntoSeguridadById$$
+CREATE PROCEDURE GetPuntoSeguridadById(IN punto_id INT)
+BEGIN
+    SELECT 
+        id,
+        nombre,
+        categoria,
+        descripcion,
+        orden_visualizacion,
+        es_critico,
+        activo,
+        created_at,
+        updated_at
+    FROM puntos_seguridad_catalogo 
+    WHERE id = punto_id AND activo = 1;
+END$$
+
+-- Crear punto de seguridad
+DROP PROCEDURE IF EXISTS CreatePuntoSeguridad$$
+CREATE PROCEDURE CreatePuntoSeguridad(
+    IN p_nombre VARCHAR(100),
+    IN p_categoria VARCHAR(50),
+    IN p_descripcion TEXT,
+    IN p_orden_visualizacion TINYINT,
+    IN p_es_critico TINYINT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    INSERT INTO puntos_seguridad_catalogo (nombre, categoria, descripcion, orden_visualizacion, es_critico, activo)
+    VALUES (p_nombre, p_categoria, p_descripcion, p_orden_visualizacion, p_es_critico, 1);
+    
+    SELECT LAST_INSERT_ID() as id, 'Punto de seguridad creado exitosamente' as message;
+    
+    COMMIT;
+END$$
+
+-- Actualizar punto de seguridad
+DROP PROCEDURE IF EXISTS UpdatePuntoSeguridad$$
+CREATE PROCEDURE UpdatePuntoSeguridad(
+    IN p_id INT,
+    IN p_nombre VARCHAR(100),
+    IN p_categoria VARCHAR(50),
+    IN p_descripcion TEXT,
+    IN p_orden_visualizacion TINYINT,
+    IN p_es_critico TINYINT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    UPDATE puntos_seguridad_catalogo 
+    SET 
+        nombre = p_nombre,
+        categoria = p_categoria,
+        descripcion = p_descripcion,
+        orden_visualizacion = p_orden_visualizacion,
+        es_critico = p_es_critico,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_id AND activo = 1;
+    
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Punto de seguridad no encontrado';
+    END IF;
+    
+    SELECT p_id as id, 'Punto de seguridad actualizado exitosamente' as message;
+    
+    COMMIT;
+END$$
+
+-- Obtener puntos de seguridad por orden
+DROP PROCEDURE IF EXISTS GetPuntosSeguridadByOrden$$
+CREATE PROCEDURE GetPuntosSeguridadByOrden(IN orden_id INT)
+BEGIN
+    SELECT 
+        ops.id,
+        ops.punto_seguridad_id as puntoId,
+        ops.estado_id as estadoId,
+        ops.notas,
+        psc.nombre as puntoNombre,
+        psc.categoria,
+        psc.es_critico as esCritico,
+        es.nombre as estadoNombre,
+        es.color as estadoColor,
+        es.icon as estadoIcon
+    FROM orden_puntos_seguridad ops
+    INNER JOIN puntos_seguridad_catalogo psc ON ops.punto_seguridad_id = psc.id
+    INNER JOIN estados_seguridad es ON ops.estado_id = es.id
+    WHERE ops.orden_id = orden_id
+    ORDER BY psc.orden_visualizacion ASC;
 END$$
 
 DELIMITER ;

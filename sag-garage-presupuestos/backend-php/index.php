@@ -92,6 +92,14 @@ try {
         $controller = new OrdenesController();
         $controller->delete($matches[1]);
     }
+    elseif ($path === 'ordenes/estados' && $request_method === 'GET') {
+        $controller = new OrdenesController();
+        $controller->getEstados();
+    }
+    elseif (preg_match('#^ordenes/([0-9]+)/estado$#', $path, $matches) && $request_method === 'PATCH') {
+        $controller = new OrdenesController();
+        $controller->changeStatus($matches[1]);
+    }
     
     // Rutas de Estados de Seguridad
     elseif ($path === 'estados-seguridad' && $request_method === 'GET') {

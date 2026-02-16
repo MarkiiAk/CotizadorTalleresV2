@@ -207,9 +207,9 @@ BEGIN
 
     SET p_orden_id = LAST_INSERT_ID();
 
-    -- Registrar en timeline
+    -- Registrar en timeline (sin estado_anterior_id ya que es nueva orden)
     INSERT INTO orden_timeline (orden_id, estado_anterior_id, estado_nuevo_id, usuario_id, notas)
-    VALUES (p_orden_id, 0, p_estado_id, p_usuario_id, 'Orden creada');
+    VALUES (p_orden_id, NULL, p_estado_id, p_usuario_id, 'Orden creada');
 
     COMMIT;
 END$$
@@ -331,9 +331,10 @@ BEGIN
 
     SELECT 
         COUNT(*) as total_ordenes,
-        SUM(CASE WHEN estado_id IN (1,2,3,4,5,6,7,8) THEN 1 ELSE 0 END) as ordenes_activas,
-        SUM(CASE WHEN estado_id = 9 THEN 1 ELSE 0 END) as ordenes_completadas,
-        SUM(CASE WHEN estado_id = 10 THEN 1 ELSE 0 END) as ordenes_canceladas,
+        -- Nuevos estados activos: 1-13 (todos excepto Cancelado=14)
+        SUM(CASE WHEN estado_id IN (1,2,3,4,5,6,7,8,9,10,11,12,13) THEN 1 ELSE 0 END) as ordenes_activas,
+        SUM(CASE WHEN estado_id IN (11,12) THEN 1 ELSE 0 END) as ordenes_completadas, -- Entregado + Pagado
+        SUM(CASE WHEN estado_id = 14 THEN 1 ELSE 0 END) as ordenes_canceladas, -- Cancelado
         SUM(CASE WHEN DATE(fecha_ingreso) = CURDATE() THEN 1 ELSE 0 END) as ordenes_hoy,
         COALESCE(AVG(total), 0) as ticket_promedio,
         COALESCE(SUM(total), 0) as ingresos_totales,
