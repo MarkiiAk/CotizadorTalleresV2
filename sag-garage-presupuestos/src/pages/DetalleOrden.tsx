@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Moon, FileText, Download, Save, ArrowLeft, X, PlayCircle, CheckCircle } from 'lucide-react';
+import { Sun, Moon, FileText, Download, Save, ArrowLeft, PlayCircle, CheckCircle } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePresupuestoStore } from '../store/usePresupuestoStore';
@@ -40,7 +40,7 @@ const ESTADOS = {
 export const DetalleOrden = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { presupuesto, themeMode, toggleTheme, loadFromOrden, resetPresupuesto, markAsSaved } = usePresupuestoStore();
+  const { presupuesto, themeMode, toggleTheme, loadFromOrden, markAsSaved } = usePresupuestoStore();
   const { showSuccess, showError } = useToastContext();
   const [showLoader, setShowLoader] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
