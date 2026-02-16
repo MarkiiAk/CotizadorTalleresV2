@@ -41,6 +41,7 @@ class OrdenesController {
             ]);
             
             $ordenes = $stmt->fetchAll();
+            $stmt->closeCursor(); // Cerrar cursor después del SP
             
             // Procesar cada orden para incluir datos relacionados
             foreach ($ordenes as &$orden) {
@@ -68,6 +69,7 @@ class OrdenesController {
             $stmt = $this->db->prepare('CALL sp_orden_find_by_id(?)');
             $stmt->execute([$id]);
             $orden = $stmt->fetch();
+            $stmt->closeCursor(); // Cerrar cursor del SP
             
             if (!$orden) {
                 http_response_code(404);
@@ -365,6 +367,7 @@ class OrdenesController {
         $stmt = $this->db->prepare('CALL sp_orden_get_servicios(?)');
         $stmt->execute([$orden['id']]);
         $serviciosDB = $stmt->fetchAll();
+        $stmt->closeCursor(); // Cerrar cursor antes del siguiente SP
         
         $orden['servicios'] = [];
         $orden['manoDeObra'] = [];
@@ -390,6 +393,7 @@ class OrdenesController {
         $stmt = $this->db->prepare('CALL sp_orden_get_refacciones(?)');
         $stmt->execute([$orden['id']]);
         $refacciones = $stmt->fetchAll();
+        $stmt->closeCursor(); // Cerrar cursor antes del siguiente SP
         
         $orden['refacciones'] = [];
         foreach ($refacciones as $refaccion) {
@@ -406,6 +410,7 @@ class OrdenesController {
         $stmt = $this->db->prepare('CALL sp_orden_get_inspeccion(?)');
         $stmt->execute([$orden['id']]);
         $inspeccionDB = $stmt->fetchAll();
+        $stmt->closeCursor(); // Cerrar cursor antes de continuar
         
         $orden['inspeccion'] = [
             'exteriores' => [],
