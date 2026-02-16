@@ -461,11 +461,20 @@ CREATE PROCEDURE sp_orden_get_inspeccion(
 )
 BEGIN
     SELECT 
-        iv.*,
+        iv.id,
+        iv.orden_id,
+        iv.elemento_id,
+        iv.tiene_elemento,
+        iv.observaciones,
+        iv.created_at,
+        iv.updated_at,
         ei.nombre,
         ei.categoria,
-        ei.descripcion,
-        ei.es_critico
+        -- Convertir tiene_elemento (1/0) a estado (string) para compatibilidad con PHP
+        CASE 
+            WHEN iv.tiene_elemento = 1 THEN 'bueno'
+            ELSE 'malo'
+        END as estado
     FROM inspeccion_vehiculo iv
     LEFT JOIN elementos_inspeccion ei ON iv.elemento_id = ei.id
     WHERE iv.orden_id = p_orden_id

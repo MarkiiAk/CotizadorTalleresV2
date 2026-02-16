@@ -2,80 +2,72 @@ import React from 'react';
 import { ClipboardCheck, X, AlertTriangle } from 'lucide-react';
 import { Card, Input, Button } from '../ui';
 import { usePresupuestoStore } from '../../store/usePresupuestoStore';
-import { DanoVehiculo } from '../../types';
+import { DanoVehiculo, ElementoInspeccion } from '../../types';
+import { elementosInspeccionAPI } from '../../services/api';
 
 interface InspeccionSectionProps {
   disabled?: boolean;
 }
 
 export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled = false }) => {
-  const { presupuesto } = usePresupuestoStore();
-  
-  // Asegurar que inspeccion siempre tenga una estructura válida
-  const inspeccion = React.useMemo(() => {
-    if (!presupuesto.inspeccion) {
-      return {
-        exteriores: {
-          lucesFrontales: true,
-          cuartoLuces: true,
-          antena: true,
-          espejosLaterales: true,
-          cristales: true,
-          emblemas: true,
-          llantas: true,
-          taponRuedas: true,
-          moldurasCompletas: true,
-          taponGasolina: true,
-          limpiadores: true,
-        },
-        interiores: {
-          instrumentoTablero: true,
-          calefaccion: true,
-          sistemaSonido: true,
-          bocinas: true,
-          espejoRetrovisor: true,
-          cinturones: true,
-          botoniaGeneral: true,
-          manijas: true,
-          tapetes: true,
-          vestiduras: true,
-          otros: true,
-        },
-        danosAdicionales: [],
-      };
-    }
-    
-    // Asegurar que exteriores e interiores existen
-    return {
-      exteriores: presupuesto.inspeccion.exteriores || {
-        lucesFrontales: true,
-        cuartoLuces: true,
-        antena: true,
-        espejosLaterales: true,
-        cristales: true,
-        emblemas: true,
-        llantas: true,
-        taponRuedas: true,
-        moldurasCompletas: true,
-        taponGasolina: true,
-        limpiadores: true,
-      },
-      interiores: presupuesto.inspeccion.interiores || {
-        instrumentoTablero: true,
-        calefaccion: true,
-        sistemaSonido: true,
-        bocinas: true,
-        espejoRetrovisor: true,
-        cinturones: true,
-        botoniaGeneral: true,
-        manijas: true,
-        tapetes: true,
-        vestiduras: true,
-        otros: true,
-      },
-      danosAdicionales: presupuesto.inspeccion.danosAdicionales || [],
+  const { presupuesto, markAsChanged } = usePresupuestoStore();
+  const [elementosExteriores, setElementosExteriores] = React.useState<ElementoInspeccion[]>([]);
+  const [elementosInteriores, setElementosInteriores] = React.useState<ElementoInspeccion[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Cargar elementos de inspección desde la API
+  React.useEffect(() => {
+    const cargarElementos = async () => {
+      try {
+        setIsLoading(true);
+        const elementos = await elementosInspeccionAPI.getElementos();
+        
+        // Separar por categoría
+        const exteriores = elementos
+          .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
+          .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+        
+        const interiores = elementos
+          .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
+          .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+
+        setElementosExteriores(exteriores);
+        setElementosInteriores(interiores);
+      } catch (error) {
+        console.error('❌ Error cargando elementos de inspección:', error);
+        // Fallback a elementos hardcodeados si hay error
+        setElementosExteriores([]);
+        setElementosInteriores([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }, [presupuesto.inspeccion]);
+
+    cargarElementos();
+  }, []);
+  
+  // Crear estructura dinámica de inspección basada en elementos de BD
+  const inspeccion = React.useMemo(() => {
+    const baseInspeccion = {
+      exteriores: {} as Record<string, boolean>,
+      interiores: {} as Record<string, boolean>,
+      danosAdicionales: presupuesto.inspeccion?.danosAdicionales || [],
+    };
+
+    // Inicializar exteriores dinámicamente
+    elementosExteriores.forEach(elemento => {
+      const fieldKey = elemento.key.replace('ext_', '');
+      baseInspeccion.exteriores[fieldKey] = presupuesto.inspeccion?.exteriores?.[fieldKey] || false;
+    });
+
+    // Inicializar interiores dinámicamente
+    elementosInteriores.forEach(elemento => {
+      const fieldKey = elemento.key.replace('int_', '');
+      baseInspeccion.interiores[fieldKey] = presupuesto.inspeccion?.interiores?.[fieldKey] || false;
+    });
+
+    return baseInspeccion;
+  }, [presupuesto.inspeccion, elementosExteriores, elementosInteriores]);
 
   const [nuevoDano, setNuevoDano] = React.useState<Omit<DanoVehiculo, 'id'>>({
     ubicacion: '',
@@ -84,51 +76,57 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
   });
 
   const handleCheckboxChange = (section: 'exteriores' | 'interiores', field: string) => {
-    const store = usePresupuestoStore.getState();
-    
-    // Inicializar inspeccion si no existe
-    if (!store.presupuesto.inspeccion) {
-      store.presupuesto.inspeccion = {
+    usePresupuestoStore.setState((state) => {
+      // Crear una nueva estructura de inspección con el cambio
+      const currentInspeccion = state.presupuesto.inspeccion || {
         exteriores: { ...inspeccion.exteriores },
         interiores: { ...inspeccion.interiores },
         danosAdicionales: [],
       };
-    }
-    
-    const sectionData = store.presupuesto.inspeccion[section] as any;
-    sectionData[field] = !sectionData[field];
-    usePresupuestoStore.setState({ presupuesto: { ...store.presupuesto } });
+
+      const currentSection = currentInspeccion[section] as any;
+      const newValue = !currentSection[field];
+
+      return {
+        presupuesto: {
+          ...state.presupuesto,
+          inspeccion: {
+            ...currentInspeccion,
+            [section]: {
+              ...currentSection,
+              [field]: newValue
+            }
+          }
+        },
+        hasUnsavedChanges: true,
+      };
+    });
   };
 
   const agregarDano = () => {
     if (nuevoDano.ubicacion && nuevoDano.tipo) {
-      const store = usePresupuestoStore.getState();
-      
-      // Inicializar inspeccion si no existe
-      if (!store.presupuesto.inspeccion) {
-        store.presupuesto.inspeccion = {
+      usePresupuestoStore.setState((state) => {
+        const currentInspeccion = state.presupuesto.inspeccion || {
           exteriores: { ...inspeccion.exteriores },
           interiores: { ...inspeccion.interiores },
           danosAdicionales: [],
         };
-      }
-      
-      const newDano: DanoVehiculo = {
-        ...nuevoDano,
-        id: Math.random().toString(36).substring(2, 11),
-      };
-      
-      // Crear nuevo array inmutable en lugar de mutar
-      const nuevosDanos = [...(store.presupuesto.inspeccion.danosAdicionales || []), newDano];
-      
-      usePresupuestoStore.setState({ 
-        presupuesto: {
-          ...store.presupuesto,
-          inspeccion: {
-            ...store.presupuesto.inspeccion,
-            danosAdicionales: nuevosDanos
-          }
-        }
+
+        const newDano: DanoVehiculo = {
+          ...nuevoDano,
+          id: Math.random().toString(36).substring(2, 11),
+        };
+
+        return {
+          presupuesto: {
+            ...state.presupuesto,
+            inspeccion: {
+              ...currentInspeccion,
+              danosAdicionales: [...currentInspeccion.danosAdicionales, newDano]
+            }
+          },
+          hasUnsavedChanges: true,
+        };
       });
       
       setNuevoDano({ ubicacion: '', tipo: '', descripcion: '' });
@@ -136,28 +134,23 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
   };
 
   const eliminarDano = (id: string) => {
-    const store = usePresupuestoStore.getState();
-    
-    // Inicializar inspeccion si no existe
-    if (!store.presupuesto.inspeccion) {
-      store.presupuesto.inspeccion = {
+    usePresupuestoStore.setState((state) => {
+      const currentInspeccion = state.presupuesto.inspeccion || {
         exteriores: { ...inspeccion.exteriores },
         interiores: { ...inspeccion.interiores },
         danosAdicionales: [],
       };
-    }
-    
-    // Crear nuevo array inmutable filtrado
-    const danosFiltrados = (store.presupuesto.inspeccion.danosAdicionales || []).filter(d => d.id !== id);
-    
-    usePresupuestoStore.setState({ 
-      presupuesto: {
-        ...store.presupuesto,
-        inspeccion: {
-          ...store.presupuesto.inspeccion,
-          danosAdicionales: danosFiltrados
-        }
-      }
+
+      return {
+        presupuesto: {
+          ...state.presupuesto,
+          inspeccion: {
+            ...currentInspeccion,
+            danosAdicionales: currentInspeccion.danosAdicionales.filter(d => d.id !== id)
+          }
+        },
+        hasUnsavedChanges: true,
+      };
     });
   };
 
@@ -194,63 +187,26 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
             <ClipboardCheck size={20} className="text-sag-600" />
             Accesorios Exteriores
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            <ChecklistItem
-              label="Luces Frontales"
-              checked={inspeccion.exteriores.lucesFrontales}
-              onChange={() => handleCheckboxChange('exteriores', 'lucesFrontales')}
-            />
-            <ChecklistItem
-              label="Cuarto de Luces"
-              checked={inspeccion.exteriores.cuartoLuces}
-              onChange={() => handleCheckboxChange('exteriores', 'cuartoLuces')}
-            />
-            <ChecklistItem
-              label="Antena"
-              checked={inspeccion.exteriores.antena}
-              onChange={() => handleCheckboxChange('exteriores', 'antena')}
-            />
-            <ChecklistItem
-              label="Espejos Laterales"
-              checked={inspeccion.exteriores.espejosLaterales}
-              onChange={() => handleCheckboxChange('exteriores', 'espejosLaterales')}
-            />
-            <ChecklistItem
-              label="Cristales"
-              checked={inspeccion.exteriores.cristales}
-              onChange={() => handleCheckboxChange('exteriores', 'cristales')}
-            />
-            <ChecklistItem
-              label="Emblemas"
-              checked={inspeccion.exteriores.emblemas}
-              onChange={() => handleCheckboxChange('exteriores', 'emblemas')}
-            />
-            <ChecklistItem
-              label="Llantas"
-              checked={inspeccion.exteriores.llantas}
-              onChange={() => handleCheckboxChange('exteriores', 'llantas')}
-            />
-            <ChecklistItem
-              label="Tapón de Ruedas"
-              checked={inspeccion.exteriores.taponRuedas}
-              onChange={() => handleCheckboxChange('exteriores', 'taponRuedas')}
-            />
-            <ChecklistItem
-              label="Molduras Completas"
-              checked={inspeccion.exteriores.moldurasCompletas}
-              onChange={() => handleCheckboxChange('exteriores', 'moldurasCompletas')}
-            />
-            <ChecklistItem
-              label="Tapón de Gasolina"
-              checked={inspeccion.exteriores.taponGasolina}
-              onChange={() => handleCheckboxChange('exteriores', 'taponGasolina')}
-            />
-            <ChecklistItem
-              label="Limpiadores"
-              checked={inspeccion.exteriores.limpiadores}
-              onChange={() => handleCheckboxChange('exteriores', 'limpiadores')}
-            />
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Cargando elementos...</div>
+            </div>
+          ) : elementosExteriores.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {elementosExteriores.map((elemento) => (
+                <ChecklistItem
+                  key={elemento.key}
+                  label={elemento.nombre}
+                  checked={inspeccion.exteriores[elemento.key.replace('ext_', '')] || false}
+                  onChange={() => handleCheckboxChange('exteriores', elemento.key.replace('ext_', ''))}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500 dark:text-gray-400">No se encontraron elementos exteriores</div>
+            </div>
+          )}
         </div>
 
         {/* Interiores */}
@@ -259,63 +215,26 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
             <ClipboardCheck size={20} className="text-sag-600" />
             Accesorios Interiores
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            <ChecklistItem
-              label="Instrumento de Tablero"
-              checked={inspeccion.interiores.instrumentoTablero}
-              onChange={() => handleCheckboxChange('interiores', 'instrumentoTablero')}
-            />
-            <ChecklistItem
-              label="Calefacción"
-              checked={inspeccion.interiores.calefaccion}
-              onChange={() => handleCheckboxChange('interiores', 'calefaccion')}
-            />
-            <ChecklistItem
-              label="Sistema de Sonido"
-              checked={inspeccion.interiores.sistemaSonido}
-              onChange={() => handleCheckboxChange('interiores', 'sistemaSonido')}
-            />
-            <ChecklistItem
-              label="Bocinas"
-              checked={inspeccion.interiores.bocinas}
-              onChange={() => handleCheckboxChange('interiores', 'bocinas')}
-            />
-            <ChecklistItem
-              label="Espejo Retrovisor"
-              checked={inspeccion.interiores.espejoRetrovisor}
-              onChange={() => handleCheckboxChange('interiores', 'espejoRetrovisor')}
-            />
-            <ChecklistItem
-              label="Cinturones"
-              checked={inspeccion.interiores.cinturones}
-              onChange={() => handleCheckboxChange('interiores', 'cinturones')}
-            />
-            <ChecklistItem
-              label="Botonería General"
-              checked={inspeccion.interiores.botoniaGeneral}
-              onChange={() => handleCheckboxChange('interiores', 'botoniaGeneral')}
-            />
-            <ChecklistItem
-              label="Manijas"
-              checked={inspeccion.interiores.manijas}
-              onChange={() => handleCheckboxChange('interiores', 'manijas')}
-            />
-            <ChecklistItem
-              label="Tapetes"
-              checked={inspeccion.interiores.tapetes}
-              onChange={() => handleCheckboxChange('interiores', 'tapetes')}
-            />
-            <ChecklistItem
-              label="Vestiduras"
-              checked={inspeccion.interiores.vestiduras}
-              onChange={() => handleCheckboxChange('interiores', 'vestiduras')}
-            />
-            <ChecklistItem
-              label="Otros"
-              checked={inspeccion.interiores.otros}
-              onChange={() => handleCheckboxChange('interiores', 'otros')}
-            />
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Cargando elementos...</div>
+            </div>
+          ) : elementosInteriores.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {elementosInteriores.map((elemento) => (
+                <ChecklistItem
+                  key={elemento.key}
+                  label={elemento.nombre}
+                  checked={inspeccion.interiores[elemento.key.replace('int_', '')] || false}
+                  onChange={() => handleCheckboxChange('interiores', elemento.key.replace('int_', ''))}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500 dark:text-gray-400">No se encontraron elementos interiores</div>
+            </div>
+          )}
         </div>
 
         {/* Daños adicionales */}

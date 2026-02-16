@@ -16,6 +16,7 @@ interface PresupuestoState {
   updateTaller: (data: Partial<Presupuesto['taller']>) => void;
   updateCliente: (data: Partial<Presupuesto['cliente']>) => void;
   updateVehiculo: (data: Partial<Presupuesto['vehiculo']>) => void;
+  updateInspeccion: (data: Partial<InspeccionVehiculo>) => void;
   
   // Puntos de Seguridad
   updatePuntosSeguridad: (puntos: PuntoSeguridadOrden[]) => void;
@@ -179,6 +180,17 @@ export const usePresupuestoStore = create<PresupuestoState>()((set, get) => ({
       presupuesto: {
         ...state.presupuesto,
         vehiculo: { ...state.presupuesto.vehiculo, ...data },
+      },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  // Actualizar información de inspección
+  updateInspeccion: (data) => {
+    set((state) => ({
+      presupuesto: {
+        ...state.presupuesto,
+        inspeccion: { ...state.presupuesto.inspeccion, ...data },
       },
       hasUnsavedChanges: true,
     }));
@@ -550,6 +562,52 @@ export const usePresupuestoStore = create<PresupuestoState>()((set, get) => ({
       restante: 0,
     };
     
+    // MAPEAR INSPECCIÓN del backend al formato del frontend
+    const mapearInspeccion = (inspeccionBackend: any) => {
+      // Mapeo de elementos del backend que no coinciden con el frontend
+      const mapeoBackendAFrontend: Record<string, string> = {
+        // Elementos que vienen sin mapear del backend
+        'Antena': 'antena',
+        'Cristales': 'cristales',
+        'Emblemas': 'emblemas',
+        'Llantas': 'llantas',
+        'Limpiadores': 'limpiadores',
+        'Calefacción': 'calefaccion',
+        'Bocinas': 'bocinas',
+        'Manijas': 'manijas',
+        'Tapetes': 'tapetes',
+        'Vestiduras': 'vestiduras',
+      };
+      
+      const inspeccionMapeada = {
+        exteriores: { ...initialInspeccion.exteriores },
+        interiores: { ...initialInspeccion.interiores },
+        danosAdicionales: inspeccionBackend?.danosAdicionales || [],
+      };
+      
+      // Mapear elementos de exteriores
+      if (inspeccionBackend?.exteriores) {
+        Object.entries(inspeccionBackend.exteriores).forEach(([key, value]) => {
+          const keyMapeada = mapeoBackendAFrontend[key] || key;
+          if (keyMapeada in inspeccionMapeada.exteriores) {
+            (inspeccionMapeada.exteriores as any)[keyMapeada] = Boolean(value);
+          }
+        });
+      }
+      
+      // Mapear elementos de interiores
+      if (inspeccionBackend?.interiores) {
+        Object.entries(inspeccionBackend.interiores).forEach(([key, value]) => {
+          const keyMapeada = mapeoBackendAFrontend[key] || key;
+          if (keyMapeada in inspeccionMapeada.interiores) {
+            (inspeccionMapeada.interiores as any)[keyMapeada] = Boolean(value);
+          }
+        });
+      }
+      
+      return inspeccionMapeada;
+    };
+    
     const folio = ordenAny.numero_orden || orden.folio || '';
     const fechaCreacion = ordenAny.fecha_ingreso || orden.fechaCreacion;
     const fechaSalida = orden.fechaSalida || ordenAny.fecha_promesa_entrega;
@@ -564,7 +622,7 @@ export const usePresupuestoStore = create<PresupuestoState>()((set, get) => ({
         taller: taller,
         cliente: cliente,
         vehiculo: vehiculo,
-        inspeccion: orden.inspeccion || initialInspeccion,
+        inspeccion: mapearInspeccion(orden.inspeccion),
         problemaReportado: ordenAny.problema_reportado || orden.problemaReportado || '',
         diagnosticoTecnico: ordenAny.diagnostico_tecnico || orden.diagnosticoTecnico || '',
         servicios: orden.servicios || [],

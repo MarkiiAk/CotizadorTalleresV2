@@ -96,6 +96,10 @@ try {
         $controller = new OrdenesController();
         $controller->getEstados();
     }
+    elseif ($path === 'elementos-inspeccion' && $request_method === 'GET') {
+        $controller = new OrdenesController();
+        $controller->getElementosInspeccion();
+    }
     elseif (preg_match('#^ordenes/([0-9]+)/estado$#', $path, $matches) && $request_method === 'PATCH') {
         $controller = new OrdenesController();
         $controller->changeStatus($matches[1]);

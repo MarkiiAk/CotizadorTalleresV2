@@ -216,3 +216,10 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface ElementoInspeccion {
+  id: number;
+  nombre: string;
+  key: string;
+  orden: number;
+}

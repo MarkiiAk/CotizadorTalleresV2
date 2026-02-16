@@ -334,6 +334,51 @@ class OrdenesController {
     }
     
     /**
+     * Obtener elementos de inspección - GET /api/elementos-inspeccion
+     */
+    public function getElementosInspeccion() {
+        try {
+            requireAuth();
+            
+            $stmt = $this->db->prepare('
+                SELECT id, nombre, categoria, orden_visual, activo 
+                FROM elementos_inspeccion 
+                WHERE activo = 1 
+                ORDER BY categoria, orden_visual, nombre
+            ');
+            $stmt->execute();
+            $elementos = $stmt->fetchAll();
+            
+            // Agrupar por categoría y mapear a estructura frontend
+            $result = [
+                'exteriores' => [],
+                'interiores' => []
+            ];
+            
+            foreach ($elementos as $elemento) {
+                $categoria = strtolower($elemento['categoria']) === 'interior' ? 'interiores' : 'exteriores';
+                $frontendKey = $this->mapearElementoKey($elemento['nombre']);
+                
+                $result[$categoria][] = [
+                    'id' => (int)$elemento['id'],
+                    'nombre' => $elemento['nombre'],
+                    'key' => $frontendKey,
+                    'orden' => (int)$elemento['orden_visual']
+                ];
+            }
+            
+            echo json_encode($result);
+            
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Error al obtener elementos de inspección',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
      * Eliminar orden - DELETE /api/ordenes/:id
      */
     public function delete($id) {
@@ -422,7 +467,12 @@ class OrdenesController {
             $categoria = strtolower($elemento['categoria'] ?? 'exterior');
             $key = $categoria === 'interior' ? 'interiores' : 'exteriores';
             
-            $orden['inspeccion'][$key][$elemento['nombre']] = $elemento['estado'] === 'bueno';
+            // Mapear nombres de elementos a keys del frontend
+            $nombre = $elemento['nombre'];
+            $frontendKey = $this->mapearElementoKey($nombre);
+            
+            // El valor viene del campo tiene_elemento (1 o 0)
+            $orden['inspeccion'][$key][$frontendKey] = (bool)$elemento['tiene_elemento'];
         }
         
         // Mapear campos para compatibilidad con frontend
@@ -589,54 +639,48 @@ class OrdenesController {
     }
     
     private function insertInspeccionVehiculo($orden_id, $inspeccionData) {
+        // ¡NO INSERTAR ELEMENTOS NUEVOS! Solo usar los que YA EXISTEN en BD
+        
+        // Obtener TODOS los elementos existentes de BD
+        $stmt = $this->db->prepare('SELECT id, nombre, categoria FROM elementos_inspeccion WHERE activo = 1');
+        $stmt->execute();
+        $elementosBD = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         $stmt = $this->db->prepare('
             INSERT INTO inspeccion_vehiculo (orden_id, elemento_id, tiene_elemento, observaciones, created_at)
             VALUES (?, ?, ?, ?, NOW())
         ');
         
-        // Mapear elementos de inspección del frontend
-        $elementos = array_merge(
-            $inspeccionData['exteriores'] ?? [],
-            $inspeccionData['interiores'] ?? []
-        );
-        
-        foreach ($elementos as $nombre => $tieneElemento) {
-            // Obtener ID del elemento (o crearlo si no existe)
-            $elemento_id = $this->getOrCreateElementoInspeccion($nombre);
+        // Para cada elemento de BD, buscar si el frontend envió información
+        foreach ($elementosBD as $elemento) {
+            $frontendKey = $this->mapearElementoKey($elemento['nombre']);
             
+            // Buscar el valor en los datos del frontend
+            $tieneElemento = false;
+            
+            // Buscar en exteriores
+            if (isset($inspeccionData['exteriores'][$frontendKey])) {
+                $tieneElemento = (bool)$inspeccionData['exteriores'][$frontendKey];
+            }
+            // Buscar en interiores
+            elseif (isset($inspeccionData['interiores'][$frontendKey])) {
+                $tieneElemento = (bool)$inspeccionData['interiores'][$frontendKey];
+            }
+            // Si no está en frontend, asumir que SÍ tiene el elemento (default)
+            else {
+                $tieneElemento = true;
+            }
+            
+            // Insertar el registro de inspección
             $stmt->execute([
                 $orden_id,
-                $elemento_id,
-                $tieneElemento ? 1 : 0, // TINYINT(1) - 1 si tiene el elemento, 0 si no
+                $elemento['id'],
+                $tieneElemento ? 1 : 0,
                 ''
             ]);
         }
     }
     
-    private function getOrCreateElementoInspeccion($nombre) {
-        // Buscar elemento existente
-        $stmt = $this->db->prepare('SELECT id FROM elementos_inspeccion WHERE nombre = ? LIMIT 1');
-        $stmt->execute([$nombre]);
-        $existing = $stmt->fetch();
-        
-        if ($existing) {
-            return $existing['id'];
-        }
-        
-        // Crear nuevo elemento
-        $categoria = $this->determinarCategoriaElemento($nombre);
-        $stmt = $this->db->prepare('
-            INSERT INTO elementos_inspeccion (nombre, categoria, obligatorio, orden_visual, activo, created_at)
-            VALUES (?, ?, 0, 0, 1, NOW())
-        ');
-        $stmt->execute([$nombre, $categoria]);
-        return $this->db->lastInsertId();
-    }
-    
-    private function determinarCategoriaElemento($nombre) {
-        $interiores = ['radio', 'encendedor', 'documentos', 'bocinas', 'calefaccion', 'sistemaSonido'];
-        return in_array($nombre, $interiores) ? 'interior' : 'exterior';
-    }
     
     private function insertPuntosSeguridad($orden_id, $puntos) {
         $stmt = $this->db->prepare('
@@ -689,6 +733,44 @@ class OrdenesController {
                 $this->insertPuntosSeguridad($orden_id, $data['puntosSeguridad']);
             }
         }
+    }
+    
+    private function mapearElementoKey($nombreElemento) {
+        // Mapeo COMPLETO de nombres en schema-v2.sql a keys EXACTAS del frontend
+        $mapeoBD = [
+            // EXTERIORES (mapeo exacto a InspeccionSection.tsx)
+            'Luces Frontales' => 'lucesFrontales',
+            'Cuarto de Luces' => 'cuartoLuces', 
+            'Antena' => 'antena', // ← CORREGIDO: era 'Antena', debe ser 'antena'
+            'Espejos Laterales' => 'espejosLaterales',
+            'Cristales' => 'cristales', // ← CORREGIDO: era 'Cristales', debe ser 'cristales'
+            'Emblemas' => 'emblemas', // ← CORREGIDO: era 'Emblemas', debe ser 'emblemas'
+            'Llantas' => 'llantas', // ← CORREGIDO: era 'Llantas', debe ser 'llantas'
+            'Llanta de Refacción' => 'llantaRefaccion',
+            'Tapón de Ruedas' => 'taponRuedas',
+            'Molduras' => 'moldurasCompletas',
+            'Tapón de Gasolina' => 'taponGasolina',
+            'Limpiadores' => 'limpiadores', // ← CORREGIDO: era 'Limpiadores', debe ser 'limpiadores'
+            
+            // INTERIORES (mapeo exacto a InspeccionSection.tsx)
+            'Instrumentos del Tablero' => 'instrumentoTablero',
+            'Calefacción' => 'calefaccion', // ← CORREGIDO: era 'Calefacción', debe ser 'calefaccion'
+            'Sistema de Sonido' => 'sistemaSonido',
+            'Bocinas' => 'bocinas', // ← CORREGIDO: era 'Bocinas', debe ser 'bocinas'
+            'Espejo Retrovisor' => 'espejoRetrovisor',
+            'Cinturones de Seguridad' => 'cinturones',
+            'Botonería General' => 'botoniaGeneral',
+            'Manijas' => 'manijas', // ← CORREGIDO: era 'Manijas', debe ser 'manijas'
+            'Tapetes' => 'tapetes', // ← CORREGIDO: era 'Tapetes', debe ser 'tapetes'
+            'Vestiduras' => 'vestiduras', // ← CORREGIDO: era 'Vestiduras', debe ser 'vestiduras'
+            'Radio' => 'radio',
+            'Encendedor' => 'encendedor',
+            
+            // OTROS
+            'Otros' => 'otros'
+        ];
+        
+        return $mapeoBD[$nombreElemento] ?? $nombreElemento;
     }
     
     private function validateOrdenData($data) {

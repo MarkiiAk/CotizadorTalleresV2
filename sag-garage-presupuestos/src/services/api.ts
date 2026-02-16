@@ -210,4 +210,11 @@ export const puntosSeguridadAPI = {
   },
 };
 
+export const elementosInspeccionAPI = {
+  getElementos: async () => {
+    const response = await api.get('/elementos-inspeccion');
+    return response.data;
+  },
+};
+
 export default api;
