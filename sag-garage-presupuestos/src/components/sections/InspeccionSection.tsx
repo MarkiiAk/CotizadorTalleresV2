@@ -3,7 +3,7 @@ import { ClipboardCheck, X, AlertTriangle } from 'lucide-react';
 import { Card, Input, Button } from '../ui';
 import { usePresupuestoStore } from '../../store/usePresupuestoStore';
 import { DanoVehiculo, ElementoInspeccion } from '../../types';
-import { elementosInspeccionAPI } from '../../services/api';
+import { cacheService } from '../../services/cache';
 
 interface InspeccionSectionProps {
   disabled?: boolean;
@@ -20,7 +20,7 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
     const cargarElementos = async () => {
       try {
         setIsLoading(true);
-        const response = await elementosInspeccionAPI.getElementos();
+        const response = await cacheService.getElementosInspeccion();
         
         // Manejar ambos formatos: array plano o estructura agrupada
         let exteriores: ElementoInspeccion[] = [];

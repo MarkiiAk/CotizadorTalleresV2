@@ -3,7 +3,7 @@ import { Sun, Moon, FileText, Download, Save, ArrowLeft, PlayCircle, CheckCircle
 import { pdf } from '@react-pdf/renderer';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePresupuestoStore } from '../store/usePresupuestoStore';
-import { ordenesAPI } from '../services/api';
+import { ordenesAPI, elementosInspeccionAPI } from '../services/api';
 import { GarageLoader } from '../components/ui/GarageLoader';
 import { mergePDFWithGarantia } from '../utils/pdfMerger';
 import { useToastContext } from '../contexts/ToastContext';
@@ -59,40 +59,56 @@ export const DetalleOrden = () => {
     }
   }, [themeMode]);
 
-  // Cargar orden
+  // Cargar orden y elementos de inspección en paralelo
   useEffect(() => {
-    const cargarOrden = async () => {
+    const cargarDatosCompletos = async () => {
       if (!id) {
         navigate('/dashboard');
         return;
       }
 
-      setIsLoading(true); // Siempre mostrar loader hasta completar todo
+      setIsLoading(true);
       
       try {
-        console.log('📋 Cargando orden desde API:', id);
-        const ordenData = await ordenesAPI.getById(id);
+        console.log('📋 Cargando datos completos para orden:', id);
+        
+        // Ejecutar ambas llamadas API en paralelo
+        const [ordenData, elementosData] = await Promise.all([
+          ordenesAPI.getById(id),
+          elementosInspeccionAPI.getElementos()
+        ]);
+        
         console.log('✅ Orden cargada:', ordenData);
+        console.log('✅ Elementos inspección cargados:', elementosData?.length || 0, 'elementos');
+        
         if (ordenData) {
           setOrden(ordenData);
           loadFromOrden(ordenData);
           
-          // Solo quitar el loader después de que loadFromOrden termine
+          // Cachear elementos de inspección para futuras cargas
+          if (elementosData && Array.isArray(elementosData)) {
+            localStorage.setItem('elementos-inspeccion-cache', JSON.stringify({
+              data: elementosData,
+              timestamp: Date.now()
+            }));
+          }
+          
+          // Solo quitar loader después de que todo esté completamente cargado
           setTimeout(() => {
             setIsLoading(false);
-          }, 100); // Pequeña pausa para asegurar que loadFromOrden termine
+          }, 100);
         } else {
           showError('Error', 'Orden no encontrada');
           navigate('/dashboard');
         }
       } catch (error) {
-        console.error('Error al cargar orden:', error);
-        showError('Error', 'Error al cargar la orden');
+        console.error('Error al cargar datos:', error);
+        showError('Error', 'Error al cargar la información de la orden');
         navigate('/dashboard');
       }
     };
 
-    cargarOrden();
+    cargarDatosCompletos();
   }, [id, navigate, loadFromOrden, showError]);
 
   const handleGeneratePDF = async () => {

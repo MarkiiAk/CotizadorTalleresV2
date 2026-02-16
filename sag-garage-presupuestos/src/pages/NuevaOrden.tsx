@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Sun, Moon, FileText, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePresupuestoStore } from '../store/usePresupuestoStore';
 import { ordenesAPI } from '../services/api';
-import { GarageLoader } from '../components/ui/GarageLoader';
 import { useToastContext } from '../contexts/ToastContext';
 import { handleAPIError } from '../utils/errorHandler';
 import {
@@ -18,7 +17,6 @@ export const NuevaOrden = () => {
   const navigate = useNavigate();
   const { presupuesto, themeMode, toggleTheme, resetPresupuesto, markAsSaved } = usePresupuestoStore();
   const { showSuccess, showError } = useToastContext();
-  const [showLoader, setShowLoader] = useState(false);
 
   // Limpiar formulario al montar el componente
   useEffect(() => {
@@ -123,10 +121,7 @@ export const NuevaOrden = () => {
       return; // Detener ejecución si hay errores de validación
     }
 
-    // Si las validaciones pasan, entonces mostrar loading y proceder
     try {
-      setShowLoader(true);
-      
       // Convertir presupuesto a Orden - SOLO ETAPA 1
       const orden = {
         id: presupuesto.id,
@@ -164,20 +159,13 @@ export const NuevaOrden = () => {
         `La orden ${result.folio} ha sido creada en estado RECIBIDO`
       );
       
-      // Navegar inmediatamente después del POST exitoso
-      // No esperamos el loader completo para evitar la pausa visual
+      // Navegación inmediata después del POST exitoso - SIN LOADER
       navigate(`/orden/${result.id}`);
       
     } catch (error) {
       console.error('Error al guardar la orden:', error);
-      setShowLoader(false);
       handleAPIError(error, showError, 'Error al guardar la orden');
     }
-  };
-
-  const handleLoaderComplete = () => {
-    setShowLoader(false);
-    // No reseteamos ni navegamos aquí ya que se hace directamente en handleSaveOrden
   };
 
   return (
@@ -224,7 +212,6 @@ export const NuevaOrden = () => {
                 variant="primary"
                 onClick={handleSaveOrden}
                 icon={<Save size={20} />}
-                disabled={showLoader}
                 className="hidden md:flex"
               >
                 Crear Orden
@@ -238,7 +225,6 @@ export const NuevaOrden = () => {
               variant="primary"
               onClick={handleSaveOrden}
               icon={<Save size={18} />}
-              disabled={showLoader}
               className="flex-1 !text-sm"
             >
               Crear Orden
@@ -298,8 +284,6 @@ export const NuevaOrden = () => {
         </div>
       </footer>
 
-      {/* Loader */}
-      {showLoader && <GarageLoader onComplete={handleLoaderComplete} />}
     </div>
   );
 };
