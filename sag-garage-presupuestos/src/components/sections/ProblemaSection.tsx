@@ -5,9 +5,10 @@ import { usePresupuestoStore } from '../../store/usePresupuestoStore';
 
 interface ProblemaSectionProps {
   disabled?: boolean;
+  showDiagnostico?: boolean;
 }
 
-export const ProblemaSection: React.FC<ProblemaSectionProps> = ({ disabled = false }) => {
+export const ProblemaSection: React.FC<ProblemaSectionProps> = ({ disabled = false, showDiagnostico = true }) => {
   const { presupuesto } = usePresupuestoStore();
 
   const handleChange = (field: 'problemaReportado' | 'diagnosticoTecnico') => (
@@ -20,8 +21,8 @@ export const ProblemaSection: React.FC<ProblemaSectionProps> = ({ disabled = fal
 
   return (
     <Card
-      title="Problema y Diagnóstico"
-      subtitle="Descripción del problema reportado por el cliente y diagnóstico técnico"
+      title={showDiagnostico ? "Problema y Diagnóstico" : "Problema Reportado"}
+      subtitle={showDiagnostico ? "Descripción del problema reportado por el cliente y diagnóstico técnico" : "Descripción del problema reportado por el cliente"}
       className="p-6"
     >
       <div className="space-y-6">
@@ -44,24 +45,26 @@ export const ProblemaSection: React.FC<ProblemaSectionProps> = ({ disabled = fal
           </p>
         </div>
 
-        {/* Diagnóstico técnico */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-            <Stethoscope size={18} className="text-sag-600" />
-            Diagnóstico Técnico
-          </label>
-          <textarea
-            value={presupuesto.diagnosticoTecnico}
-            onChange={handleChange('diagnosticoTecnico')}
-            rows={5}
-            placeholder="Describe el diagnóstico técnico realizado, incluyendo pruebas, verificaciones y conclusiones..."
-            disabled={disabled}
-            className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-0 focus:border-sag-600 dark:focus:border-sag-500 transition-all duration-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Incluye el resultado de la inspección técnica, las causas identificadas y las reparaciones necesarias.
-          </p>
-        </div>
+        {/* Diagnóstico técnico - Solo mostrar si showDiagnostico es true */}
+        {showDiagnostico && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <Stethoscope size={18} className="text-sag-600" />
+              Diagnóstico Técnico
+            </label>
+            <textarea
+              value={presupuesto.diagnosticoTecnico}
+              onChange={handleChange('diagnosticoTecnico')}
+              rows={5}
+              placeholder="Describe el diagnóstico técnico realizado, incluyendo pruebas, verificaciones y conclusiones..."
+              disabled={disabled}
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-0 focus:border-sag-600 dark:focus:border-sag-500 transition-all duration-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Incluye el resultado de la inspección técnica, las causas identificadas y las reparaciones necesarias.
+            </p>
+          </div>
+        )}
       </div>
     </Card>
   );

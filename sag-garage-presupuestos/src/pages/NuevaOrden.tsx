@@ -258,8 +258,8 @@ export const NuevaOrden = () => {
           {/* Información del Vehículo */}
           <VehiculoSection />
 
-          {/* Problema Reportado */}
-          <ProblemaSection />
+          {/* Problema Reportado - Sin diagnóstico técnico en ETAPA 1 */}
+          <ProblemaSection showDiagnostico={false} />
 
           {/* Inspección Visual del Vehículo - SOLO VISUAL BÁSICA */}
           <InspeccionSection />
