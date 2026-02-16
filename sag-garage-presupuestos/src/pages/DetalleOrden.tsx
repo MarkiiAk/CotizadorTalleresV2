@@ -67,35 +67,20 @@ export const DetalleOrden = () => {
         return;
       }
 
-      // Si venimos directamente de Nueva Orden y ya tenemos los datos básicos,
-      // mostrar los datos existentes mientras cargamos la versión actualizada
-      const hasBasicData = presupuesto.id && presupuesto.folio && presupuesto.cliente.nombreCompleto;
-      
-      if (hasBasicData && presupuesto.id === id) {
-        console.log('📋 Usando datos existentes del store para mostrar inmediatamente');
-        setIsLoading(false); // No mostrar loader si tenemos datos básicos
-        
-        // Crear un objeto orden temporal con los datos del store
-        const ordenTemporal = {
-          id: presupuesto.id,
-          folio: presupuesto.folio,
-          estado_id: 1, // Recién creada
-          cliente: presupuesto.cliente,
-          vehiculo: presupuesto.vehiculo,
-          // Otros campos...
-        };
-        setOrden(ordenTemporal as any);
-      } else {
-        setIsLoading(true);
-      }
+      setIsLoading(true); // Siempre mostrar loader hasta completar todo
       
       try {
-        console.log('📋 Cargando orden actualizada desde API:', id);
+        console.log('📋 Cargando orden desde API:', id);
         const ordenData = await ordenesAPI.getById(id);
         console.log('✅ Orden cargada:', ordenData);
         if (ordenData) {
           setOrden(ordenData);
           loadFromOrden(ordenData);
+          
+          // Solo quitar el loader después de que loadFromOrden termine
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 100); // Pequeña pausa para asegurar que loadFromOrden termine
         } else {
           showError('Error', 'Orden no encontrada');
           navigate('/dashboard');
@@ -104,20 +89,11 @@ export const DetalleOrden = () => {
         console.error('Error al cargar orden:', error);
         showError('Error', 'Error al cargar la orden');
         navigate('/dashboard');
-      } finally {
-        // Solo aplicar timeout si inicialmente estaba cargando
-        if (!hasBasicData || presupuesto.id !== id) {
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300); // Reducido de 500ms a 300ms
-        } else {
-          setIsLoading(false);
-        }
       }
     };
 
     cargarOrden();
-  }, [id, navigate, loadFromOrden, showError, presupuesto.id, presupuesto.folio, presupuesto.cliente.nombreCompleto]);
+  }, [id, navigate, loadFromOrden, showError]);
 
   const handleGeneratePDF = async () => {
     try {
