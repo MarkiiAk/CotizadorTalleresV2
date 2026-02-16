@@ -585,7 +585,7 @@ class OrdenesController {
     
     private function insertInspeccionVehiculo($orden_id, $inspeccionData) {
         $stmt = $this->db->prepare('
-            INSERT INTO inspeccion_vehiculo (orden_id, elemento_id, estado, observaciones, created_at)
+            INSERT INTO inspeccion_vehiculo (orden_id, elemento_id, tiene_elemento, observaciones, created_at)
             VALUES (?, ?, ?, ?, NOW())
         ');
         
@@ -595,14 +595,14 @@ class OrdenesController {
             $inspeccionData['interiores'] ?? []
         );
         
-        foreach ($elementos as $nombre => $estado) {
+        foreach ($elementos as $nombre => $tieneElemento) {
             // Obtener ID del elemento (o crearlo si no existe)
             $elemento_id = $this->getOrCreateElementoInspeccion($nombre);
             
             $stmt->execute([
                 $orden_id,
                 $elemento_id,
-                $estado ? 'bueno' : 'malo',
+                $tieneElemento ? 1 : 0, // TINYINT(1) - 1 si tiene el elemento, 0 si no
                 ''
             ]);
         }
