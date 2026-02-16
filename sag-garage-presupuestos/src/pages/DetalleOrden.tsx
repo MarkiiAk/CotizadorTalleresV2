@@ -433,7 +433,7 @@ export const DetalleOrden = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="w-full max-w-none mx-auto space-y-6">
+        <div className="w-4/5 mx-auto space-y-6">
           {/* Información del Cliente - Siempre visible */}
           <ClienteSection disabled={isSectionReadonly('cliente')} />
 
