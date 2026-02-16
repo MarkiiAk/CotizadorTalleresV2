@@ -621,10 +621,10 @@ class OrdenesController {
         // Crear nuevo elemento
         $categoria = $this->determinarCategoriaElemento($nombre);
         $stmt = $this->db->prepare('
-            INSERT INTO elementos_inspeccion (nombre, categoria, descripcion, es_critico, created_at)
-            VALUES (?, ?, ?, 0, NOW())
+            INSERT INTO elementos_inspeccion (nombre, categoria, obligatorio, orden_visual, activo, created_at)
+            VALUES (?, ?, 0, 0, 1, NOW())
         ');
-        $stmt->execute([$nombre, $categoria, $nombre]);
+        $stmt->execute([$nombre, $categoria]);
         return $this->db->lastInsertId();
     }
     
