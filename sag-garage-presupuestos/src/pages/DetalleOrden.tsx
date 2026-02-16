@@ -89,11 +89,6 @@ export const DetalleOrden = () => {
           // Guardar elementos de inspección en el estado
           if (elementosData && Array.isArray(elementosData)) {
             setElementosInspeccion(elementosData);
-            // Cachear elementos de inspección para futuras cargas
-            localStorage.setItem('elementos-inspeccion-cache', JSON.stringify({
-              data: elementosData,
-              timestamp: Date.now()
-            }));
           }
           
           // Solo quitar loader después de que todo esté completamente cargado

@@ -3,7 +3,7 @@ import { ClipboardCheck, X, AlertTriangle } from 'lucide-react';
 import { Card, Input, Button } from '../ui';
 import { usePresupuestoStore } from '../../store/usePresupuestoStore';
 import { DanoVehiculo, ElementoInspeccion } from '../../types';
-import { cacheService } from '../../services/cache';
+import { elementosInspeccionAPI } from '../../services/api';
 
 interface InspeccionSectionProps {
   disabled?: boolean;
@@ -16,7 +16,7 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
   const [elementosInteriores, setElementosInteriores] = React.useState<ElementoInspeccion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Cargar elementos de inspección (usar prop si está disponible, sino desde API/cache)
+  // Cargar elementos de inspección (usar prop si está disponible, sino desde API directa)
   React.useEffect(() => {
     const cargarElementos = async () => {
       try {
@@ -41,41 +41,28 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
           return;
         }
         
-        // Si no hay prop, cargar desde cache/API
-        const response = await cacheService.getElementosInspeccion();
-        
-        // Manejar ambos formatos: array plano o estructura agrupada
-        let exteriores: ElementoInspeccion[] = [];
-        let interiores: ElementoInspeccion[] = [];
+        // Si no hay prop, cargar desde API directamente
+        console.log('🔄 Cargando elementos desde API directa...');
+        const response = await elementosInspeccionAPI.getElementos();
         
         if (Array.isArray(response)) {
-          // Formato array plano
-          exteriores = response
+          // Procesar elementos de la API
+          const exteriores = response
             .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('ext_'))
             .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
           
-          interiores = response
+          const interiores = response
             .filter((elemento: ElementoInspeccion) => elemento.key.startsWith('int_'))
             .sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
-        } else if (response && typeof response === 'object' && ('exteriores' in response || 'interiores' in response)) {
-          // Formato estructura agrupada
-          exteriores = (response as any).exteriores || [];
-          interiores = (response as any).interiores || [];
-          
-          // Ordenar cada grupo
-          exteriores.sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
-          interiores.sort((a: ElementoInspeccion, b: ElementoInspeccion) => a.orden - b.orden);
+
+          console.log('✅ Elementos cargados desde API directa:', { exteriores: exteriores.length, interiores: interiores.length });
+          setElementosExteriores(exteriores);
+          setElementosInteriores(interiores);
         } else {
-          console.warn('⚠️ Formato de respuesta no reconocido:', response);
           throw new Error('Formato de respuesta inválido');
         }
-
-        console.log('✅ Elementos cargados desde cache/API:', { exteriores: exteriores.length, interiores: interiores.length });
-        setElementosExteriores(exteriores);
-        setElementosInteriores(interiores);
       } catch (error) {
         console.error('❌ Error cargando elementos de inspección:', error);
-        // Fallback a elementos vacíos si hay error
         setElementosExteriores([]);
         setElementosInteriores([]);
       } finally {
