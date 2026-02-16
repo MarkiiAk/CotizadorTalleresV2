@@ -505,6 +505,28 @@ BEGIN
     ORDER BY ot.created_at DESC;
 END$$
 
+-- =====================================================
+-- PROCEDURE: sp_orden_get_danos_adicionales
+-- Obtener daños adicionales de una orden
+-- =====================================================
+DROP PROCEDURE IF EXISTS sp_orden_get_danos_adicionales$$
+CREATE PROCEDURE sp_orden_get_danos_adicionales(
+    IN p_orden_id INT
+)
+BEGIN
+    SELECT 
+        id,
+        orden_servicio_id,
+        ubicacion,
+        tipo_dano,
+        descripcion,
+        created_at,
+        updated_at
+    FROM danos_adicionales
+    WHERE orden_servicio_id = p_orden_id
+    ORDER BY id;
+END$$
+
 
 DELIMITER ;
 

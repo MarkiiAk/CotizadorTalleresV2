@@ -479,7 +479,7 @@ class OrdenesController {
             $orden['inspeccion']['danosAdicionales'][] = [
                 'id' => (int)$dano['id'],
                 'ubicacion' => $dano['ubicacion'],
-                'tipo_dano' => $dano['tipo_dano'],
+                'tipo' => $dano['tipo_dano'], // Mapear tipo_dano a tipo para frontend
                 'descripcion' => $dano['descripcion'] ?? ''
             ];
         }
@@ -729,7 +729,7 @@ class OrdenesController {
             $stmt->execute([
                 $orden_id,
                 $dano['ubicacion'] ?? '',
-                $dano['tipo_dano'] ?? '',
+                $dano['tipo'] ?? $dano['tipo_dano'] ?? '', // Corregido: buscar 'tipo' primero, luego 'tipo_dano'
                 $dano['descripcion'] ?? ''
             ]);
         }

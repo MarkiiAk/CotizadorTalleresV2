@@ -418,4 +418,32 @@ class OrdenRepository {
     public function getConnection() {
         return $this->db;
     }
+    
+    /**
+     * Obtener daños adicionales de una orden
+     */
+    public function getDanosAdicionales($ordenId) {
+        try {
+            $stmt = $this->db->prepare('CALL sp_orden_get_danos_adicionales(?)');
+            $stmt->execute([$ordenId]);
+            
+            $danos = [];
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($results as $row) {
+                $danos[] = [
+                    'id' => (int)$row['id'],
+                    'ubicacion' => $row['ubicacion'],
+                    'tipoDano' => $row['tipo_dano'], // Mapear correctamente
+                    'descripcion' => $row['descripcion'] ?? '',
+                    'created_at' => $row['created_at']
+                ];
+            }
+            
+            return $danos;
+        } catch (Exception $e) {
+            error_log('Error en OrdenRepository::getDanosAdicionales: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
