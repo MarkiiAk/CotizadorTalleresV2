@@ -38,7 +38,7 @@ class SeguimientoController {
             
             // Verificar si ya existe un token activo para esta orden
             $stmt = $this->db->prepare('
-                SELECT token FROM orden_tokens 
+                SELECT token FROM orden_seguimiento_tokens 
                 WHERE orden_id = ? AND activo = 1
                 LIMIT 1
             ');
@@ -107,12 +107,12 @@ class SeguimientoController {
                     c.nombre as cliente_nombre,
                     CONCAT(v.marca, " ", v.modelo, " ", v.anio, " (", v.placas, ")") as vehiculo_info,
                     eo.nombre as estado_actual, eo.descripcion as estado_descripcion, eo.color as estado_color
-                FROM orden_tokens ot
-                JOIN ordenes_servicio os ON ot.orden_id = os.id
+                FROM orden_seguimiento_tokens ost
+                JOIN ordenes_servicio os ON ost.orden_id = os.id
                 JOIN clientes c ON os.cliente_id = c.id
                 JOIN vehiculos v ON os.vehiculo_id = v.id
                 JOIN estados_orden eo ON os.estado_id = eo.id
-                WHERE ot.token = ? AND ot.activo = 1
+                WHERE ost.token = ? AND ost.activo = 1
             ');
             $stmt->execute([$token]);
             $info = $stmt->fetch();
@@ -126,15 +126,15 @@ class SeguimientoController {
             // Obtener timeline de cambios de estado
             $stmt = $this->db->prepare('
                 SELECT 
-                    heo.created_at as fecha,
+                    ot.created_at as fecha,
                     eo.nombre as estado,
                     eo.descripcion,
-                    heo.notas as mensaje,
+                    ot.notas as mensaje,
                     eo.color
-                FROM historial_estados_orden heo
-                JOIN estados_orden eo ON heo.nuevo_estado_id = eo.id
-                WHERE heo.orden_id = ?
-                ORDER BY heo.created_at ASC
+                FROM orden_timeline ot
+                JOIN estados_orden eo ON ot.estado_nuevo_id = eo.id
+                WHERE ot.orden_id = ?
+                ORDER BY ot.created_at ASC
             ');
             $stmt->execute([$info['id']]);
             $timeline = $stmt->fetchAll();
@@ -182,12 +182,12 @@ class SeguimientoController {
             
             $stmt = $this->db->prepare('
                 SELECT 
-                    ot.*,
+                    ost.*,
                     o.numero_orden
-                FROM orden_tokens ot
-                JOIN ordenes_servicio o ON ot.orden_id = o.id
-                WHERE ot.orden_id = ?
-                ORDER BY ot.created_at DESC
+                FROM orden_seguimiento_tokens ost
+                JOIN ordenes_servicio o ON ost.orden_id = o.id
+                WHERE ost.orden_id = ?
+                ORDER BY ost.created_at DESC
             ');
             $stmt->execute([$orden_id]);
             $tokens = $stmt->fetchAll();
@@ -217,7 +217,7 @@ class SeguimientoController {
             requireAuth(); // Solo usuarios autenticados
             
             $stmt = $this->db->prepare('
-                UPDATE orden_tokens 
+                UPDATE orden_seguimiento_tokens 
                 SET activo = 0, updated_at = NOW() 
                 WHERE token = ?
             ');
