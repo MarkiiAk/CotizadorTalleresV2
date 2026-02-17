@@ -194,10 +194,9 @@ export const DetalleOrden = () => {
             showError('Datos Incompletos', 'Debe describir el problema reportado antes de iniciar la inspección');
             return;
           }
-          if (!presupuesto.inspeccion || Object.keys(presupuesto.inspeccion).length === 0) {
-            showError('Datos Incompletos', 'Debe completar la inspección visual antes de avanzar al diagnóstico');
-            return;
-          }
+          // NOTA: La inspección visual se puede completar DESPUÉS de iniciar el diagnóstico
+          // Por ahora solo validamos datos básicos
+          console.log('✅ Validaciones pasadas, avanzando a EN DIAGNÓSTICO');
           break;
 
         case 3: // EN DIAGNÓSTICO -> COTIZACIÓN LISTA
