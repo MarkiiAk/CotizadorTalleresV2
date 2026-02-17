@@ -304,7 +304,11 @@ export const DetalleOrden = () => {
 
   // Función para obtener el texto del botón según el estado
   const getAdvanceButtonText = () => {
-    switch (estadoActual) {
+    console.log('🔍 DEBUG - Estado actual:', estadoActual, 'Tipo:', typeof estadoActual);
+    const estado = Number(estadoActual); // Convertir a número para asegurar comparación correcta
+    console.log('🔍 DEBUG - Estado convertido:', estado);
+    
+    switch (estado) {
       case 1: return 'Iniciar Inspección'; // RECIBIDO -> EN DIAGNÓSTICO
       case 2: return 'Generar Cotización'; // EN DIAGNÓSTICO -> COTIZACIÓN LISTA  
       case 3: return 'Esperar Aprobación'; // COTIZACIÓN LISTA -> APROBADO
@@ -312,7 +316,9 @@ export const DetalleOrden = () => {
       case 5: return 'Solicitar Refacciones'; // EN TRABAJO -> ESPERANDO REFACCIONES (opcional)
       case 6: return 'Iniciar Pruebas'; // ESPERANDO REFACCIONES -> EN PRUEBAS
       case 7: return 'Preparar Entrega'; // EN PRUEBAS -> LISTO PARA ENTREGA
-      default: return 'Avanzar Estado';
+      default: 
+        console.log('🚨 DEBUG - Cayó en default case, estado:', estado);
+        return 'Avanzar Estado';
     }
   };
 
@@ -523,7 +529,7 @@ export const DetalleOrden = () => {
                 </h3>
                 <div className="mt-2 text-sm">
                   {estadoActual === 1 && (
-                    <p>Orden recibida. Haz clic en "Avanzar Estado" para comenzar el diagnóstico.</p>
+                    <p>Orden recibida. Haz clic en "Iniciar Inspección" para comenzar el diagnóstico.</p>
                   )}
                   {estadoActual === 2 && (
                     <p>Completa el diagnóstico técnico y los puntos de seguridad, luego avanza para generar la cotización.</p>
