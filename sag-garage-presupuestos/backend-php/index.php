@@ -168,7 +168,7 @@ try {
         $controller = new SeguimientoController();
         $controller->crearToken();
     }
-    elseif (preg_match('#^seguimiento/([A-Z0-9\-]+)$#', $path, $matches) && $request_method === 'GET') {
+    elseif (preg_match('#^seguimiento/([a-zA-Z0-9]+)$#', $path, $matches) && $request_method === 'GET') {
         $controller = new SeguimientoController();
         $controller->getSeguimientoInfo($matches[1]);
     }
@@ -176,7 +176,7 @@ try {
         $controller = new SeguimientoController();
         $controller->getTokensOrden($matches[1]);
     }
-    elseif (preg_match('#^seguimiento/token/([A-Z0-9\-]+)$#', $path, $matches) && $request_method === 'DELETE') {
+    elseif (preg_match('#^seguimiento/token/([a-zA-Z0-9]+)$#', $path, $matches) && $request_method === 'DELETE') {
         $controller = new SeguimientoController();
         $controller->desactivarToken($matches[1]);
     }
@@ -210,6 +210,8 @@ try {
                 'DELETE ordenes/{id}',
                 'GET estados-seguridad',
                 'GET puntos-seguridad/catalogo',
+                'POST seguimiento/crear-token',
+                'GET seguimiento/{token}',
                 'GET health'
             ]
         ]);
