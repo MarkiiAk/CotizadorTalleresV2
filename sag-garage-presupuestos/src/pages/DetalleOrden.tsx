@@ -475,7 +475,10 @@ export const DetalleOrden = () => {
               {canAdvanceState && (
                 <Button
                   variant="primary"
-                  onClick={handleAdvanceState}
+                  onClick={() => {
+                    console.log('🔥 BOTÓN CLICKEADO!', { estadoActual, canAdvanceState });
+                    handleAdvanceState();
+                  }}
                   icon={<PlayCircle size={20} />}
                   disabled={showLoader}
                   className="hidden md:flex"
