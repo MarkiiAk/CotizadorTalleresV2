@@ -302,6 +302,20 @@ export const DetalleOrden = () => {
   const canAdvanceState = estadoActual < 9 && estadoActual !== 10; // No se puede avanzar desde ENTREGADO o CANCELADO
   const canEdit = estadoActual < 9 && estadoActual !== 10; // No se puede editar si está entregado o cancelado
 
+  // Función para obtener el texto del botón según el estado
+  const getAdvanceButtonText = () => {
+    switch (estadoActual) {
+      case 1: return 'Iniciar Inspección'; // RECIBIDO -> EN DIAGNÓSTICO
+      case 2: return 'Generar Cotización'; // EN DIAGNÓSTICO -> COTIZACIÓN LISTA  
+      case 3: return 'Esperar Aprobación'; // COTIZACIÓN LISTA -> APROBADO
+      case 4: return 'Iniciar Trabajo'; // APROBADO -> EN TRABAJO
+      case 5: return 'Solicitar Refacciones'; // EN TRABAJO -> ESPERANDO REFACCIONES (opcional)
+      case 6: return 'Iniciar Pruebas'; // ESPERANDO REFACCIONES -> EN PRUEBAS
+      case 7: return 'Preparar Entrega'; // EN PRUEBAS -> LISTO PARA ENTREGA
+      default: return 'Avanzar Estado';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       {/* Header */}
@@ -352,7 +366,7 @@ export const DetalleOrden = () => {
                   disabled={showLoader}
                   className="hidden md:flex"
                 >
-                  Avanzar Estado
+                  {getAdvanceButtonText()}
                 </Button>
               )}
 
@@ -404,7 +418,7 @@ export const DetalleOrden = () => {
                 disabled={showLoader}
                 className="flex-1 !text-sm"
               >
-                Avanzar
+                {getAdvanceButtonText()}
               </Button>
             )}
             {canEdit && (
@@ -451,7 +465,10 @@ export const DetalleOrden = () => {
           <VehiculoSection disabled={isSectionReadonly('vehiculo')} />
 
           {/* Problema Reportado - Siempre visible */}
-          <ProblemaSection disabled={isSectionReadonly('problema')} />
+          <ProblemaSection 
+            disabled={isSectionReadonly('problema')} 
+            showDiagnostico={estadoActual >= 2} 
+          />
 
           {/* Inspección Visual del Vehículo - Siempre visible */}
             <InspeccionSection 
