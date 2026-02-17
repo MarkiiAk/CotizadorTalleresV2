@@ -175,10 +175,77 @@ export const DetalleOrden = () => {
     const nextStateId = estadoActual + 1;
     if (nextStateId > 10) return; // No avanzar más allá del último estado
 
+    // =====================================================
+    // VALIDACIONES FRONTEND POR ESTADO
+    // =====================================================
     try {
+      // Validar datos según el estado al que se avanza
+      switch (nextStateId) {
+        case 2: // RECIBIDO -> EN DIAGNÓSTICO
+          if (!presupuesto.cliente.nombreCompleto.trim()) {
+            showError('Datos Incompletos', 'Debe completar el nombre del cliente antes de iniciar la inspección');
+            return;
+          }
+          if (!presupuesto.vehiculo.placas.trim()) {
+            showError('Datos Incompletos', 'Debe completar las placas del vehículo antes de iniciar la inspección');
+            return;
+          }
+          if (!presupuesto.problemaReportado.trim()) {
+            showError('Datos Incompletos', 'Debe describir el problema reportado antes de iniciar la inspección');
+            return;
+          }
+          if (!presupuesto.inspeccion || Object.keys(presupuesto.inspeccion).length === 0) {
+            showError('Datos Incompletos', 'Debe completar la inspección visual antes de avanzar al diagnóstico');
+            return;
+          }
+          break;
+
+        case 3: // EN DIAGNÓSTICO -> COTIZACIÓN LISTA
+          if (!presupuesto.diagnosticoTecnico.trim()) {
+            showError('Datos Incompletos', 'Debe completar el diagnóstico técnico antes de generar la cotización');
+            return;
+          }
+          
+          const hasServicios = presupuesto.servicios.some(s => s.precio > 0);
+          const hasRefacciones = presupuesto.refacciones.some(r => r.precioVenta > 0);
+          
+          if (!hasServicios && !hasRefacciones) {
+            showError('Datos Incompletos', 'Debe agregar al menos un servicio o refacción con precio antes de generar la cotización');
+            return;
+          }
+          
+          if (presupuesto.resumen.total <= 0) {
+            showError('Datos Incompletos', 'El total de la cotización debe ser mayor a cero');
+            return;
+          }
+          break;
+
+        case 4: // COTIZACIÓN LISTA -> APROBADO
+          if (presupuesto.resumen.total <= 0) {
+            showError('Validación', 'No se puede aprobar una cotización sin monto válido');
+            return;
+          }
+          break;
+
+        case 5: case 6: case 7: case 8: // Estados intermedios
+          if (presupuesto.resumen.total <= 0) {
+            showError('Validación', 'El monto de la orden debe ser válido');
+            return;
+          }
+          break;
+
+        case 9: // ENTREGADO
+          if (presupuesto.resumen.total <= 0) {
+            showError('Validación', 'No se puede entregar una orden sin monto válido');
+            return;
+          }
+          break;
+      }
+
       setShowLoader(true);
       console.log(`🔄 Avanzando estado de ${estadoActual} a ${nextStateId}`);
       
+      // Usar el SP existente sp_orden_change_status a través del API
       await ordenesAPI.update(id, { estado_id: nextStateId });
       
       // Recargar la orden
@@ -188,7 +255,49 @@ export const DetalleOrden = () => {
       }
       
       const nextStateInfo = ESTADOS[nextStateId as keyof typeof ESTADOS];
-      showSuccess('Estado actualizado', `La orden ahora está en: ${nextStateInfo.nombre}`);
+      
+          // Mensaje específico según el estado avanzado
+          let mensaje = `La orden ahora está en: ${nextStateInfo.nombre}`;
+          switch (nextStateId) {
+            case 2:
+              // AUTOMATIZACIÓN: Crear token de seguimiento cuando pasa a "En diagnóstico"
+              try {
+                const tokenResponse = await fetch('/n3wv3r510nh1dd3n/backend-php/seguimiento/crear-token', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  },
+                  body: JSON.stringify({
+                    orden_id: id,
+                    dias_vigencia: 30
+                  })
+                });
+                
+                if (tokenResponse.ok) {
+                  const tokenData = await tokenResponse.json();
+                  console.log('Token de seguimiento creado:', tokenData.token);
+                  mensaje = 'Inspección iniciada y token de seguimiento creado para el cliente.';
+                } else {
+                  mensaje = 'Inspección iniciada. Ahora puede completar el diagnóstico técnico.';
+                }
+              } catch (tokenError) {
+                console.error('Error creando token de seguimiento:', tokenError);
+                mensaje = 'Inspección iniciada. Ahora puede completar el diagnóstico técnico.';
+              }
+              break;
+            case 3:
+              mensaje = 'Cotización generada correctamente. Lista para aprobación del cliente.';
+              break;
+            case 4:
+              mensaje = 'Cotización aprobada. Puede proceder con el trabajo.';
+              break;
+            case 9:
+              mensaje = 'Vehículo entregado correctamente. Orden completada.';
+              break;
+          }
+          
+          showSuccess('Estado Actualizado', mensaje);
     } catch (error) {
       console.error('Error al avanzar estado:', error);
       setShowLoader(false);

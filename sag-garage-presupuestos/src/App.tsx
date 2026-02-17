@@ -7,6 +7,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { NuevaOrden } from './pages/NuevaOrden';
 import { DetalleOrden } from './pages/DetalleOrden';
+import SeguimientoPublico from './pages/SeguimientoPublico';
 
 function App() {
   return (
@@ -15,8 +16,9 @@ function App() {
         <ElementosInspeccionProvider>
           <AuthProvider>
           <Routes>
-            {/* Ruta pública de login */}
+            {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
+            <Route path="/seguimiento/:token" element={<SeguimientoPublico />} />
 
             {/* Rutas protegidas */}
             <Route

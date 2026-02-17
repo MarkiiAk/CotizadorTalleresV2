@@ -30,6 +30,7 @@ require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/OrdenesController.php';
 require_once __DIR__ . '/controllers/EstadosSeguridadController.php';
 require_once __DIR__ . '/controllers/PuntosSeguridadController.php';
+require_once __DIR__ . '/controllers/SeguimientoController.php';
 
 // Obtener conexión a base de datos
 $db = Database::getInstance()->getConnection();
@@ -160,6 +161,24 @@ try {
     elseif (preg_match('#^admin/puntos-seguridad/catalogo/([0-9]+)$#', $path, $matches) && $request_method === 'DELETE') {
         $controller = new PuntosSeguridadController($db);
         $controller->deletePunto($matches[1]);
+    }
+    
+    // Rutas de seguimiento público
+    elseif ($path === 'seguimiento/crear-token' && $request_method === 'POST') {
+        $controller = new SeguimientoController();
+        $controller->crearToken();
+    }
+    elseif (preg_match('#^seguimiento/([A-Z0-9\-]+)$#', $path, $matches) && $request_method === 'GET') {
+        $controller = new SeguimientoController();
+        $controller->getSeguimientoInfo($matches[1]);
+    }
+    elseif (preg_match('#^seguimiento/orden/([0-9]+)/tokens$#', $path, $matches) && $request_method === 'GET') {
+        $controller = new SeguimientoController();
+        $controller->getTokensOrden($matches[1]);
+    }
+    elseif (preg_match('#^seguimiento/token/([A-Z0-9\-]+)$#', $path, $matches) && $request_method === 'DELETE') {
+        $controller = new SeguimientoController();
+        $controller->desactivarToken($matches[1]);
     }
     
     // Ruta de salud

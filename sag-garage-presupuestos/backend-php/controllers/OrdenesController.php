@@ -231,7 +231,17 @@ class OrdenesController {
                 return;
             }
             
-            // Preparar datos para actualización
+            // Si solo se está cambiando el estado, usar el SP específico
+            if (isset($data['estado_id']) && count($data) === 1) {
+                $stmt = $this->db->prepare('CALL sp_orden_change_status(?, ?, ?, ?)');
+                $stmt->execute([$id, $data['estado_id'], $userData['userId'], '']);
+                $stmt->closeCursor();
+                
+                $this->getById($id);
+                return;
+            }
+            
+            // Preparar datos para actualización completa
             $resumen = $data['resumen'] ?? [];
             $subtotal = ($resumen['servicios'] ?? 0) + ($resumen['manoDeObra'] ?? 0) + ($resumen['refacciones'] ?? 0);
             $descuento = $resumen['descuento'] ?? 0;
@@ -247,8 +257,11 @@ class OrdenesController {
             
             // Actualizar usando stored procedure
             $stmt = $this->db->prepare('
-                CALL sp_orden_update(?, ?, ?, ?, ?, ?, ?, 1, "media", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                CALL sp_orden_update(?, ?, ?, ?, ?, ?, ?, ?, "media", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
+            
+            // Usar estado_id si viene en data, sino mantener el actual
+            $estado_id = isset($data['estado_id']) ? $data['estado_id'] : $ordenExistente['estado_id'];
             
             $stmt->execute([
                 $id,
@@ -258,6 +271,7 @@ class OrdenesController {
                 $userData['userId'],
                 $data['problemaReportado'] ?? '',
                 $data['diagnosticoTecnico'] ?? '',
+                $estado_id,
                 $vehiculoData['kilometrajeEntrada'] ?? '',
                 $vehiculoData['kilometrajeSalida'] ?? '',
                 $vehiculoData['nivelCombustible'] ?? 0,
