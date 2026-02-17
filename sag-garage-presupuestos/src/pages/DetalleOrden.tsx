@@ -170,15 +170,27 @@ export const DetalleOrden = () => {
   };
 
   const handleAdvanceState = async () => {
-    if (!id || !orden) return;
+    console.log('🚀 INICIANDO handleAdvanceState');
+    console.log('🔍 DEBUG - id:', id, 'orden:', !!orden);
+    
+    if (!id || !orden) {
+      console.log('❌ ERROR - No hay id o orden');
+      return;
+    }
 
-    const nextStateId = estadoActual + 1;
-    if (nextStateId > 10) return; // No avanzar más allá del último estado
+    const nextStateId = Number(estadoActual) + 1;
+    console.log('🔍 DEBUG - estadoActual:', estadoActual, 'nextStateId:', nextStateId);
+    
+    if (nextStateId > 10) {
+      console.log('❌ ERROR - nextStateId > 10');
+      return; // No avanzar más allá del último estado
+    }
 
     // =====================================================
     // VALIDACIONES FRONTEND POR ESTADO
     // =====================================================
     try {
+      console.log('✅ Entrando a validaciones, nextStateId:', nextStateId);
       // Validar datos según el estado al que se avanza
       switch (nextStateId) {
         case 2: // RECIBIDO -> EN DIAGNÓSTICO
