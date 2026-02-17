@@ -38,9 +38,8 @@ class SeguimientoController {
             
             // Verificar si ya existe un token activo para esta orden
             $stmt = $this->db->prepare('
-                SELECT token FROM orden_seguimiento_tokens 
-                WHERE orden_id = ? AND activo = TRUE 
-                AND (expires_at IS NULL OR expires_at > NOW())
+                SELECT token FROM orden_tokens 
+                WHERE orden_id = ? AND activo = 1
                 LIMIT 1
             ');
             $stmt->execute([$orden_id]);
@@ -100,10 +99,23 @@ class SeguimientoController {
                 return;
             }
             
-            $stmt = $this->db->prepare('CALL sp_get_seguimiento_info(?)');
+            // Buscar token y obtener información de la orden directamente
+            $stmt = $this->db->prepare('
+                SELECT 
+                    os.id, os.numero_orden, os.problema_reportado, os.created_at as fecha_ingreso,
+                    os.fecha_promesa, os.total, os.anticipo, (os.total - os.anticipo) as saldo_pendiente,
+                    c.nombre as cliente_nombre,
+                    CONCAT(v.marca, " ", v.modelo, " ", v.anio, " (", v.placas, ")") as vehiculo_info,
+                    eo.nombre as estado_actual, eo.descripcion as estado_descripcion, eo.color as estado_color
+                FROM orden_tokens ot
+                JOIN ordenes_servicio os ON ot.orden_id = os.id
+                JOIN clientes c ON os.cliente_id = c.id
+                JOIN vehiculos v ON os.vehiculo_id = v.id
+                JOIN estados_orden eo ON os.estado_id = eo.id
+                WHERE ot.token = ? AND ot.activo = 1
+            ');
             $stmt->execute([$token]);
             $info = $stmt->fetch();
-            $stmt->closeCursor();
             
             if (!$info) {
                 http_response_code(404);
@@ -111,11 +123,21 @@ class SeguimientoController {
                 return;
             }
             
-            // Obtener timeline
-            $stmt = $this->db->prepare('CALL sp_get_seguimiento_timeline(?)');
-            $stmt->execute([$token]);
+            // Obtener timeline de cambios de estado
+            $stmt = $this->db->prepare('
+                SELECT 
+                    heo.created_at as fecha,
+                    eo.nombre as estado,
+                    eo.descripcion,
+                    heo.notas as mensaje,
+                    eo.color
+                FROM historial_estados_orden heo
+                JOIN estados_orden eo ON heo.nuevo_estado_id = eo.id
+                WHERE heo.orden_id = ?
+                ORDER BY heo.created_at ASC
+            ');
+            $stmt->execute([$info['id']]);
             $timeline = $stmt->fetchAll();
-            $stmt->closeCursor();
             
             // Formatear respuesta amigable para el cliente
             $response = [
@@ -160,12 +182,12 @@ class SeguimientoController {
             
             $stmt = $this->db->prepare('
                 SELECT 
-                    ost.*,
+                    ot.*,
                     o.numero_orden
-                FROM orden_seguimiento_tokens ost
-                JOIN ordenes_servicio o ON ost.orden_id = o.id
-                WHERE ost.orden_id = ?
-                ORDER BY ost.created_at DESC
+                FROM orden_tokens ot
+                JOIN ordenes_servicio o ON ot.orden_id = o.id
+                WHERE ot.orden_id = ?
+                ORDER BY ot.created_at DESC
             ');
             $stmt->execute([$orden_id]);
             $tokens = $stmt->fetchAll();
@@ -195,8 +217,8 @@ class SeguimientoController {
             requireAuth(); // Solo usuarios autenticados
             
             $stmt = $this->db->prepare('
-                UPDATE orden_seguimiento_tokens 
-                SET activo = FALSE, updated_at = NOW() 
+                UPDATE orden_tokens 
+                SET activo = 0, updated_at = NOW() 
                 WHERE token = ?
             ');
             $stmt->execute([$token]);

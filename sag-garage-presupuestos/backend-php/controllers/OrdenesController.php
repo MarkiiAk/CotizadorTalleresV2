@@ -317,9 +317,20 @@ class OrdenesController {
                 return;
             }
             
+            // Obtener estado actual antes del cambio
+            $stmt = $this->db->prepare('SELECT estado_id FROM ordenes_servicio WHERE id = ?');
+            $stmt->execute([$id]);
+            $ordenActual = $stmt->fetch();
+            $estadoAnterior = $ordenActual['estado_id'] ?? null;
+            
             $stmt = $this->db->prepare('CALL sp_orden_change_status(?, ?, ?, ?)');
             $stmt->execute([$id, $nuevoEstado, $userData['userId'], $notas]);
             $stmt->closeCursor(); // Cerrar cursor del SP
+            
+            // Si cambió de RECIBIDO (1) a EN_DIAGNOSTICO (2), crear token de seguimiento
+            if ($estadoAnterior == 1 && $nuevoEstado == 2) {
+                $this->crearTokenSeguimiento($id);
+            }
             
             $this->getById($id);
             
@@ -862,5 +873,30 @@ class OrdenesController {
         }
         
         return $errors;
+    }
+    
+    /**
+     * Crear token de seguimiento para la orden
+     */
+    private function crearTokenSeguimiento($orden_id) {
+        try {
+            // Generar token único
+            $token = hash('sha256', $orden_id . time() . uniqid());
+            
+            // Insertar token en la base de datos
+            $stmt = $this->db->prepare('
+                INSERT INTO orden_tokens (orden_id, token, activo, created_at)
+                VALUES (?, ?, 1, NOW())
+            ');
+            $stmt->execute([$orden_id, $token]);
+            
+            error_log("Token de seguimiento creado: $token para orden $orden_id");
+            
+            return $token;
+            
+        } catch (Exception $e) {
+            error_log('Error creando token de seguimiento: ' . $e->getMessage());
+            return false;
+        }
     }
 }
