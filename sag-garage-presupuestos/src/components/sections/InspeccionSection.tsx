@@ -18,7 +18,7 @@ export const InspeccionSection: React.FC<InspeccionSectionProps> = ({ disabled =
   // Cargar elementos de inspección usando el contexto
   React.useEffect(() => {
     loadElementos();
-  }, [loadElementos]);
+  }, []); // Sin dependencias para evitar bucle infinito
 
   // Procesar elementos cuando cambien
   React.useEffect(() => {

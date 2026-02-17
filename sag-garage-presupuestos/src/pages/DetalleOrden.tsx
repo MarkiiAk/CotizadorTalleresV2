@@ -85,11 +85,7 @@ export const DetalleOrden = () => {
           setOrden(ordenData);
           loadFromOrden(ordenData);
           
-          
-          // Solo quitar loader después de que todo esté completamente cargado
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 100);
+          setIsLoading(false);
         } else {
           showError('Error', 'Orden no encontrada');
           navigate('/dashboard');
@@ -102,7 +98,7 @@ export const DetalleOrden = () => {
     };
 
     cargarDatosCompletos();
-  }, [id, navigate, loadFromOrden, showError]);
+  }, [id]); // Solo depende de id
 
   const handleGeneratePDF = async () => {
     try {
